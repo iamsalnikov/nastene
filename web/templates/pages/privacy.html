@@ -1,0 +1,27 @@
+{{ define "content" }}
+{{ $p := .Data }}
+<div class="box">
+    <h1>Приватность стены</h1>
+    <form method="post" action="/settings/privacy/wall" class="form">
+        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+        <div class="row">
+            <label>Кто видит стену</label>
+            <select name="view_scope">
+                <option value="public" {{ if eq (print $p.ViewScope) "public" }}selected{{ end }}>Все</option>
+                <option value="friends" {{ if eq (print $p.ViewScope) "friends" }}selected{{ end }}>Только друзья</option>
+            </select>
+        </div>
+        <div class="row">
+            <label>Кто может писать на стене</label>
+            <select name="post_scope">
+                <option value="public" {{ if eq (print $p.PostScope) "public" }}selected{{ end }}>Все</option>
+                <option value="friends" {{ if eq (print $p.PostScope) "friends" }}selected{{ end }}>Только друзья</option>
+            </select>
+        </div>
+        <div class="row">
+            <button type="submit">Сохранить</button>
+        </div>
+    </form>
+    <p class="hint"><a href="/settings">← Все настройки</a></p>
+</div>
+{{ end }}

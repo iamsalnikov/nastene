@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find *)",
+      "Bash(task mocks *)",
+      "Bash(task lint *)",
+      "Bash(task test *)",
+      "Bash(task build *)",
+      "Bash(task migrate-status *)",
+      "Bash(task migrate-up *)",
+      "Bash(PGPASSWORD=nastene psql -h localhost -p 5432 -U nastene -d nastene -c \"\\\\d users\")",
+      "Bash(PGPASSWORD=nastene psql -h localhost -p 5432 -U nastene -d nastene -c \"\\\\d profile_privacy\")",
+      "Bash(go build *)",
+      "Bash(go vet *)",
+      "Bash(go test *)"
+    ]
+  }
+}

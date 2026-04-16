@@ -1,0 +1,62 @@
+{{ define "content" }}
+{{ $ov := .Data }}
+{{ $csrf := .CSRFToken }}
+<div class="box">
+    <h1>Друзья</h1>
+    {{ if $ov.Friends }}
+    <ul class="friend-list">
+        {{ range $ov.Friends }}
+        <li>
+            <a href="/id{{ .User.ID }}">{{ .User.DisplayName }}</a>
+            <form method="post" action="/friends/remove/{{ .User.ID }}" class="inline">
+                <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                <button type="submit" class="link-button meta">убрать</button>
+            </form>
+        </li>
+        {{ end }}
+    </ul>
+    {{ else }}
+    <p class="hint">Пока никого.</p>
+    {{ end }}
+</div>
+
+{{ if $ov.Incoming }}
+<div class="box">
+    <h1>Входящие заявки</h1>
+    <ul class="friend-list">
+        {{ range $ov.Incoming }}
+        <li>
+            <a href="/id{{ .User.ID }}">{{ .User.DisplayName }}</a>
+            <span>
+                <form method="post" action="/friends/accept/{{ .User.ID }}" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit">Принять</button>
+                </form>
+                <form method="post" action="/friends/reject/{{ .User.ID }}" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit" class="link-button meta">отклонить</button>
+                </form>
+            </span>
+        </li>
+        {{ end }}
+    </ul>
+</div>
+{{ end }}
+
+{{ if $ov.Outgoing }}
+<div class="box">
+    <h1>Отправленные заявки</h1>
+    <ul class="friend-list">
+        {{ range $ov.Outgoing }}
+        <li>
+            <a href="/id{{ .User.ID }}">{{ .User.DisplayName }}</a>
+            <form method="post" action="/friends/cancel/{{ .User.ID }}" class="inline">
+                <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                <button type="submit" class="link-button meta">отозвать</button>
+            </form>
+        </li>
+        {{ end }}
+    </ul>
+</div>
+{{ end }}
+{{ end }}

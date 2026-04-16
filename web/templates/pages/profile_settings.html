@@ -1,0 +1,69 @@
+{{ define "content" }}
+{{ $f := .Data }}
+{{ $u := $f.User }}
+<script src="/static/js/avatar_resize.js" defer></script>
+<div class="box">
+    <h1>Моя страница</h1>
+    <p class="hint">Эти поля видны на вашей странице. Кому показывать каждую группу — задаётся в <a href="/settings/privacy/profile">приватности профиля</a>.</p>
+
+    <form method="post" action="/settings/profile" class="form" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+
+        <div class="row">
+            <label>Аватар</label>
+            <img src="{{ avatarURL $u.AvatarPath }}" alt="аватар" width="120" style="border:1px solid #dfe3e8;display:block;margin-bottom:4px" data-avatar-preview>
+            <input type="file" name="avatar" accept="image/png,image/jpeg">
+            <div class="hint">PNG или JPEG. Большие фото автоматически уменьшаются до 500×500 пикселей в браузере. <span data-avatar-status></span></div>
+        </div>
+
+        <div class="row">
+            <label for="display_name">Имя</label>
+            <input type="text" id="display_name" name="display_name" required minlength="2" maxlength="64" value="{{ $u.DisplayName }}">
+        </div>
+
+        <div class="row">
+            <label for="gender">Пол</label>
+            <select id="gender" name="gender">
+                <option value="" {{ if eq $u.Gender "" }}selected{{ end }}>не указан</option>
+                <option value="male" {{ if eq $u.Gender "male" }}selected{{ end }}>мужской</option>
+                <option value="female" {{ if eq $u.Gender "female" }}selected{{ end }}>женский</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label for="birth_date">Дата рождения</label>
+            <input type="date" id="birth_date" name="birth_date" value="{{ $f.BirthDate }}">
+        </div>
+
+        <div class="row">
+            <label for="city">Родной город</label>
+            <input type="text" id="city" name="city" maxlength="80" value="{{ $u.City }}">
+        </div>
+
+        <div class="row">
+            <label for="website">Веб-сайт</label>
+            <input type="text" id="website" name="website" maxlength="200" placeholder="https://..." value="{{ $u.Website }}">
+        </div>
+
+        <div class="row">
+            <label for="activity">Деятельность</label>
+            <input type="text" id="activity" name="activity" maxlength="200" value="{{ $u.Activity }}">
+        </div>
+
+        <div class="row">
+            <label for="quote">Любимая цитата</label>
+            <textarea id="quote" name="quote" maxlength="1000">{{ $u.Quote }}</textarea>
+        </div>
+
+        <div class="row">
+            <label for="bio">О себе</label>
+            <textarea id="bio" name="bio" maxlength="2000">{{ $u.Bio }}</textarea>
+        </div>
+
+        <div class="row">
+            <button type="submit">Сохранить</button>
+            <a href="/id{{ $u.ID }}" class="hint">отмена</a>
+        </div>
+    </form>
+</div>
+{{ end }}

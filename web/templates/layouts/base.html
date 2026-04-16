@@ -1,0 +1,43 @@
+{{ define "base.html" }}<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>{{ if .Title }}{{ .Title }} — {{ end }}Стена</title>
+    <meta name="viewport" content="width=1000">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js" defer></script>
+</head>
+<body>
+<div id="page">
+    <div id="header">
+        <div id="header-inner">
+            <a href="/" class="logo">Стена</a>
+            <div class="header-links">
+                {{ if .User }}
+                    <a href="/id{{ .User.ID }}">Моя страница</a>
+                    <a href="/friends">Друзья{{ if gt .IncomingRequests 0 }} (+{{ abbrev .IncomingRequests }}){{ end }}</a>
+                    <a href="/settings">Настройки</a>
+                    <form method="post" action="/logout" class="inline">
+                        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+                        <button type="submit" class="link-button">Выйти</button>
+                    </form>
+                {{ else }}
+                    <a href="/login">Войти</a>
+                    <a href="/register">Регистрация</a>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+
+    <div id="content">
+        {{ template "flash" . }}
+        {{ template "content" . }}
+    </div>
+
+    <div id="footer">
+        Стена © 2007. Ничего лишнего.
+    </div>
+</div>
+</body>
+</html>
+{{ end }}

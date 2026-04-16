@@ -1,0 +1,4 @@
+{{ define "flash" }}
+{{ if .Error }}<div class="box box-error">{{ .Error }}</div>{{ end }}
+{{ if .Flash }}<div class="box box-flash">{{ .Flash }}</div>{{ end }}
+{{ end }}

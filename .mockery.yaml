@@ -1,0 +1,15 @@
+with-expecter: true
+dir: "mocks/{{.PackageName}}"
+outpkg: "{{.PackageName}}mocks"
+mockname: "{{.InterfaceName}}"
+filename: "{{.InterfaceName}}.go"
+packages:
+  github.com/iamsalnikov/nastene/internal/service/auth:
+    config:
+      all: true
+  github.com/iamsalnikov/nastene/internal/service/wall:
+    config:
+      all: true
+  github.com/iamsalnikov/nastene/internal/service/profile:
+    config:
+      all: true

@@ -1,0 +1,25 @@
+{{ define "content" }}
+{{ $rows := .Data }}
+{{ $csrf := .CSRFToken }}
+<div class="box">
+    <h1>Бан-лист</h1>
+    {{ if $rows }}
+    <ul class="friend-list">
+        {{ range $rows }}
+        <li>
+            <a href="/id{{ .User.ID }}">{{ .User.DisplayName }}</a>
+            <span class="meta">{{ .CreatedAt }}</span>
+            <form method="post" action="/settings/bans/remove/{{ .BannedID }}" class="inline">
+                <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                <button type="submit" class="link-button meta">разбанить</button>
+            </form>
+        </li>
+        {{ end }}
+    </ul>
+    {{ else }}
+    <p class="hint">Пусто. Чтобы забанить пользователя, открой его страницу и нажми «забанить».</p>
+    {{ end }}
+
+    <p class="hint"><a href="/settings">← Все настройки</a></p>
+</div>
+{{ end }}

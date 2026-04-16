@@ -1,0 +1,20 @@
+{{ define "content" }}
+{{ $v := .Data }}
+<div class="box">
+    <h1>Друзья {{ $v.Owner.DisplayName }} (<a href="/id{{ $v.Owner.ID }}">← на страницу</a>)</h1>
+    {{ if $v.Friends }}
+    <ul class="profile-friends__list">
+        {{ range $v.Friends }}
+        <li>
+            <a href="/id{{ .ID }}">
+                <img src="{{ avatarURL .AvatarPath }}" alt="" width="80" height="80">
+                <span>{{ .DisplayName }}</span>
+            </a>
+        </li>
+        {{ end }}
+    </ul>
+    {{ else }}
+    <p class="hint">Список друзей скрыт или пуст.</p>
+    {{ end }}
+</div>
+{{ end }}

@@ -1,0 +1,73 @@
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  DATABASE_URL: '{{.DATABASE_URL | default "postgres://nastene:nastene@localhost:5432/nastene?sslmode=disable"}}'
+  MIGRATIONS_DIR: ./migrations
+
+tasks:
+  default:
+    cmds:
+      - task -l
+
+  up:
+    desc: Start Postgres (podman/docker compose)
+    cmds:
+      - '{{.COMPOSE | default "podman compose"}} up -d'
+
+  down:
+    desc: Stop Postgres
+    cmds:
+      - '{{.COMPOSE | default "podman compose"}} down'
+
+  logs:
+    desc: Tail Postgres logs
+    cmds:
+      - '{{.COMPOSE | default "podman compose"}} logs -f postgres'
+
+  run:
+    desc: Run the HTTP server
+    cmds:
+      - go run ./cmd/nastene
+
+  build:
+    desc: Build binary into ./bin/nastene
+    cmds:
+      - mkdir -p bin
+      - go build -o bin/nastene ./cmd/nastene
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./... -race -count=1
+
+  lint:
+    desc: go vet + staticcheck (if installed)
+    cmds:
+      - go vet ./...
+
+  mocks:
+    desc: Generate mocks via mockery (EXPECTER)
+    cmds:
+      - mockery
+
+  migrate-up:
+    desc: Apply all migrations
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} postgres "{{.DATABASE_URL}}" up
+
+  migrate-down:
+    desc: Roll back one migration
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} postgres "{{.DATABASE_URL}}" down
+
+  migrate-status:
+    desc: Show migration status
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} postgres "{{.DATABASE_URL}}" status
+
+  migrate-new:
+    desc: 'Create new migration: task migrate-new -- name_here'
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} -s create {{.CLI_ARGS}} sql

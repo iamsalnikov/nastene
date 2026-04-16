@@ -1,0 +1,233 @@
+{{ define "content" }}
+{{ $page := .Data }}
+{{ $view := $page.Wall }}
+{{ $pv := $page.Profile }}
+{{ $owner := $pv.User }}
+{{ $vis := $pv.Visibility }}
+{{ $viewer := .User }}
+{{ $isSelf := false }}
+{{ if $viewer }}{{ if eq $viewer.ID $owner.ID }}{{ $isSelf = true }}{{ end }}{{ end }}
+{{ $fs := print $view.Friendship }}
+{{ $csrf := .CSRFToken }}
+
+<div class="profile-layout">
+    <aside class="profile-layout__left">
+        <div class="profile-side">
+            <img class="profile-side__avatar" src="{{ avatarURL $owner.AvatarPath }}" alt="аватар" width="200">
+            {{ if $isSelf }}
+            <p class="profile-side__edit"><a href="/settings/profile">Редактировать страницу</a></p>
+            {{ end }}
+            {{ if $vis.Online }}
+            <p class="profile-side__presence">{{ presence $owner.LastSeenAt }}</p>
+            {{ end }}
+        </div>
+
+        {{ if and $viewer (not $isSelf) }}
+        <div class="profile-side profile-side__actions">
+            {{ if $view.IBannedThem }}
+            <form method="post" action="/id{{ $owner.ID }}/unban" class="inline">
+                <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                <button type="submit">Убрать из бана</button>
+            </form>
+            <p class="hint">Этот пользователь у вас в бане — он не видит вашу стену и не пишет вам.</p>
+            {{ else }}
+                {{ if eq $fs "none" }}
+                <form method="post" action="/friends/request/{{ $owner.ID }}" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit">Добавить в друзья</button>
+                </form>
+                {{ else if eq $fs "request_sent" }}
+                <p class="hint">Заявка отправлена.</p>
+                <form method="post" action="/friends/cancel/{{ $owner.ID }}" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit" class="link-button meta">отозвать заявку</button>
+                </form>
+                {{ else if eq $fs "request_received" }}
+                <form method="post" action="/friends/accept/{{ $owner.ID }}" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit">Принять в друзья</button>
+                </form>
+                <form method="post" action="/friends/reject/{{ $owner.ID }}" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit" class="link-button meta">отклонить</button>
+                </form>
+                {{ else if eq $fs "friend" }}
+                <p class="hint">В друзьях.</p>
+                <form method="post" action="/friends/remove/{{ $owner.ID }}" class="inline" onsubmit="return confirm('Удалить из друзей?')">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit" class="link-button meta">удалить из друзей</button>
+                </form>
+                {{ end }}
+                <form method="post" action="/id{{ $owner.ID }}/ban" class="inline" onsubmit="return confirm('Забанить пользователя?')">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <button type="submit" class="link-button meta">забанить</button>
+                </form>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        {{ if and $vis.FriendsList $pv.Friends }}
+        <div class="profile-side">
+            <h2 class="profile-side__title">Друзья ({{ len $pv.Friends }})
+                <a href="/id{{ $owner.ID }}/friends" class="meta">все →</a>
+            </h2>
+            <ul class="profile-friends__list">
+                {{ range (slice $pv.Friends 0 (minInt (len $pv.Friends) 6)) }}
+                <li>
+                    <a href="/id{{ .ID }}">
+                        <img src="{{ avatarURL .AvatarPath }}" alt="" width="60" height="60">
+                        <span>{{ .DisplayName }}</span>
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+        {{ end }}
+    </aside>
+
+    <section class="profile-layout__right">
+        <div class="box profile-header">
+            <h1 class="profile-header__name">{{ $owner.DisplayName }}{{ if $isSelf }} <span class="meta">(это вы)</span>{{ end }}</h1>
+
+            <div class="profile-header__body">
+            {{ if $vis.Banned }}
+            <p class="hint">Профиль скрыт. Возможно, вы в бане у этого пользователя.</p>
+            {{ else }}
+                {{ if $vis.Basic }}
+                <table class="profile-info">
+                    <tr><td class="profile-info__label">Пол:</td><td>{{ genderLabel $owner.Gender }}</td></tr>
+                    {{ if $owner.BirthDate }}
+                    <tr><td class="profile-info__label">Дата рождения:</td><td>{{ birthDate $owner.BirthDate }}</td></tr>
+                    {{ end }}
+                    {{ if $owner.City }}
+                    <tr><td class="profile-info__label">Родной город:</td><td>{{ $owner.City }}</td></tr>
+                    {{ end }}
+                </table>
+                {{ end }}
+
+                {{ if $vis.Bio }}
+                    {{ if or $owner.Website $owner.Activity $owner.Quote $owner.Bio }}
+                    <h2 class="profile-card__sub">Информация</h2>
+                    <table class="profile-info">
+                        {{ if $owner.Website }}
+                        <tr><td class="profile-info__label">Веб-сайт:</td><td><a href="{{ $owner.Website }}" rel="nofollow noopener">{{ $owner.Website }}</a></td></tr>
+                        {{ end }}
+                        {{ if $owner.Activity }}
+                        <tr><td class="profile-info__label">Деятельность:</td><td>{{ $owner.Activity }}</td></tr>
+                        {{ end }}
+                        {{ if $owner.Quote }}
+                        <tr><td class="profile-info__label">Любимая цитата:</td><td>{{ $owner.Quote }}</td></tr>
+                        {{ end }}
+                        {{ if $owner.Bio }}
+                        <tr><td class="profile-info__label">О себе:</td><td>{{ $owner.Bio }}</td></tr>
+                        {{ end }}
+                    </table>
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+            </div>
+        </div>
+
+        <div class="box wall-box">
+            <h1 class="wall-box__title">Стена</h1>
+
+            <div class="wall-box__body">
+            {{ if not $view.Visible }}
+            <p class="hint">Стена скрыта.</p>
+            {{ else }}
+                {{ if $view.CanPost }}
+                <form method="post" action="/id{{ $owner.ID }}/post" class="form wall-post-form">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <div class="row">
+                        <textarea name="body" placeholder="Что нового?" required></textarea>
+                    </div>
+                    <div class="row">
+                        <button type="submit">Написать</button>
+                        <a href="/graffiti/{{ $owner.ID }}" class="hint">рисовать граффити →</a>
+                    </div>
+                </form>
+                <hr style="border:0;border-top:1px solid #dfe3e8;margin:10px 0">
+                {{ else }}
+                <p class="hint">Вам нельзя писать на этой стене.</p>
+                {{ end }}
+
+                {{ if $view.Posts }}
+                    {{ range $view.Posts }}
+                        {{ $canDelete := false }}
+                        {{ if $viewer }}
+                            {{ if or (eq $viewer.ID .Post.AuthorID) (eq $viewer.ID $owner.ID) }}
+                                {{ $canDelete = true }}
+                            {{ end }}
+                        {{ end }}
+                        <div class="wall-post">
+                            <a href="/id{{ .Author.ID }}" class="wall-post__avatar">
+                                <img src="{{ avatarURL .Author.AvatarPath }}" alt="" width="40" height="40">
+                            </a>
+                            <div class="wall-post__main">
+                                <div>
+                                    <span class="author"><a href="/id{{ .Author.ID }}">{{ .Author.DisplayName }}</a></span>
+                                    <span class="meta">{{ formatDate .Post.CreatedAt }}</span>
+                                </div>
+                                <div class="body">{{ if eq (print .Post.Kind) "graffiti" }}<img class="graffiti-img" src="/uploads/{{ .Post.GraffitiPath }}" alt="граффити">{{ else }}{{ .Post.BodyText }}{{ end }}</div>
+                                {{ if $canDelete }}
+                                <div class="wall-post__actions">
+                                    <form method="post" action="/post/{{ .Post.ID }}/delete" class="inline" onsubmit="return confirm('Удалить пост?')">
+                                        <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                                        <button type="submit" class="link-button meta">удалить</button>
+                                    </form>
+                                </div>
+                                {{ end }}
+
+                                {{ if .Comments }}
+                                <div class="comments">
+                                    {{ range .Comments }}
+                                    <div class="comment">
+                                        <a href="/id{{ .Author.ID }}" class="comment__avatar">
+                                            <img src="{{ avatarURL .Author.AvatarPath }}" alt="" width="24" height="24">
+                                        </a>
+                                        <div class="comment__main">
+                                            <div>
+                                                <span class="author"><a href="/id{{ .Author.ID }}">{{ .Author.DisplayName }}</a></span>
+                                                <span class="meta">{{ formatDate .Comment.CreatedAt }}</span>
+                                            </div>
+                                            <div>{{ .Comment.Body }}</div>
+                                            {{ if $viewer }}
+                                                {{ if or (eq $viewer.ID .Comment.AuthorID) (eq $viewer.ID $owner.ID) }}
+                                                <div class="comment__actions">
+                                                    <form method="post" action="/comment/{{ .Comment.ID }}/delete" class="inline" onsubmit="return confirm('Удалить комментарий?')">
+                                                        <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                                                        <button type="submit" class="link-button meta">удалить</button>
+                                                    </form>
+                                                </div>
+                                                {{ end }}
+                                            {{ end }}
+                                        </div>
+                                    </div>
+                                    {{ end }}
+                                </div>
+                                {{ end }}
+
+                                {{ if and $viewer $view.CanPost }}
+                                <form method="post" action="/post/{{ .Post.ID }}/comment" class="form comment-form">
+                                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                                    <div class="row">
+                                        <textarea name="body" placeholder="Комментарий" required rows="2" style="width:100%;height:40px"></textarea>
+                                    </div>
+                                    <div class="row"><button type="submit">Ответить</button></div>
+                                </form>
+                                {{ end }}
+                            </div>
+                        </div>
+                    {{ end }}
+                    {{ if gt $view.NextPage 0 }}
+                    <p><a href="/id{{ $owner.ID }}?offset={{ $view.NextPage }}">Показать ещё</a></p>
+                    {{ end }}
+                {{ else }}
+                    <p class="hint">Пока ничего не написали.</p>
+                {{ end }}
+            {{ end }}
+            </div>
+        </div>
+    </section>
+</div>
+{{ end }}

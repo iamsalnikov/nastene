@@ -1,0 +1,19 @@
+{{ define "content" }}
+{{ $page := .Data }}
+<div class="box">
+    <h1>Граффити для <a href="/id{{ $page.OwnerID }}">{{ $page.DisplayName }}</a></h1>
+    <div class="graffiti-toolbar">
+        <label>Цвет: <input type="color" id="graffiti-color" value="#2b587a"></label>
+        <label>Толщина: <input type="range" id="graffiti-size" min="1" max="20" value="3"></label>
+        <button type="button" id="graffiti-clear">Очистить</button>
+    </div>
+    <canvas id="graffiti-canvas" width="500" height="300" style="border:1px solid #bfc3c7;background:#fff;display:block;margin:8px 0"></canvas>
+    <form method="post" action="/graffiti/{{ $page.OwnerID }}" id="graffiti-form" class="form">
+        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+        <input type="hidden" name="image" id="graffiti-image">
+        <button type="submit">Отправить</button>
+        <a href="/id{{ $page.OwnerID }}" class="hint">Отмена</a>
+    </form>
+</div>
+<script src="/static/js/graffiti.js" defer></script>
+{{ end }}

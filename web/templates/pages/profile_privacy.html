@@ -1,0 +1,52 @@
+{{ define "content" }}
+{{ $p := .Data.Privacy }}
+<div class="box">
+    <h1>Приватность профиля</h1>
+    <p class="hint">Каждая группа полей скрывается отдельно. «Никто» означает, что поле не увидит вообще никто, кроме вас.</p>
+
+    <form method="post" action="/settings/privacy/profile" class="form">
+        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+
+        <div class="row">
+            <label>Онлайн / последний визит</label>
+            <select name="online_scope">
+                <option value="everyone" {{ if eq (print $p.OnlineScope) "everyone" }}selected{{ end }}>Все</option>
+                <option value="friends"  {{ if eq (print $p.OnlineScope) "friends" }}selected{{ end }}>Только друзья</option>
+                <option value="nobody"   {{ if eq (print $p.OnlineScope) "nobody" }}selected{{ end }}>Никто</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label>Аватар и основная информация (пол, ДР, город)</label>
+            <select name="basic_scope">
+                <option value="everyone" {{ if eq (print $p.BasicScope) "everyone" }}selected{{ end }}>Все</option>
+                <option value="friends"  {{ if eq (print $p.BasicScope) "friends" }}selected{{ end }}>Только друзья</option>
+                <option value="nobody"   {{ if eq (print $p.BasicScope) "nobody" }}selected{{ end }}>Никто</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label>Список друзей</label>
+            <select name="friends_scope">
+                <option value="everyone" {{ if eq (print $p.FriendsScope) "everyone" }}selected{{ end }}>Все</option>
+                <option value="friends"  {{ if eq (print $p.FriendsScope) "friends" }}selected{{ end }}>Только друзья</option>
+                <option value="nobody"   {{ if eq (print $p.FriendsScope) "nobody" }}selected{{ end }}>Никто</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <label>Биография и контакты (О себе, цитата, деятельность, веб-сайт)</label>
+            <select name="bio_scope">
+                <option value="everyone" {{ if eq (print $p.BioScope) "everyone" }}selected{{ end }}>Все</option>
+                <option value="friends"  {{ if eq (print $p.BioScope) "friends" }}selected{{ end }}>Только друзья</option>
+                <option value="nobody"   {{ if eq (print $p.BioScope) "nobody" }}selected{{ end }}>Никто</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <button type="submit">Сохранить</button>
+            <a href="/settings/privacy" class="hint">← Все настройки</a>
+        </div>
+    </form>
+</div>
+{{ end }}

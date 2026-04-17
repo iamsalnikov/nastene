@@ -74,33 +74,35 @@ func New(deps Deps) *Server {
 	mux.HandleFunc("POST /login", auth.PostLogin)
 	mux.HandleFunc("POST /logout", auth.PostLogout)
 
+	authed := mux.With(deps.Sessions.RequireAuth)
+
 	wall := &handler.Wall{
 		Service:  deps.WallService,
 		Profile:  deps.ProfileService,
 		Renderer: deps.Renderer,
 	}
-	mux.HandleFunc("GET /id/{id}", wall.Get)
-	mux.HandleFunc("POST /id/{id}/post", wall.PostText)
+	authed.HandleFunc("GET /id/{id}", wall.Get)
+	authed.HandleFunc("POST /id/{id}/post", wall.PostText)
 
 	comment := &handler.Comment{
 		Service: deps.CommentService,
 		Posts:   deps.PostOwner,
 	}
-	mux.HandleFunc("POST /post/{id}/comment", comment.PostComment)
-	mux.HandleFunc("POST /post/{id}/delete", comment.DeletePost)
-	mux.HandleFunc("POST /comment/{id}/delete", comment.DeleteComment)
+	authed.HandleFunc("POST /post/{id}/comment", comment.PostComment)
+	authed.HandleFunc("POST /post/{id}/delete", comment.DeletePost)
+	authed.HandleFunc("POST /comment/{id}/delete", comment.DeleteComment)
 
 	friends := &handler.Friends{
 		Service:   deps.FriendsService,
 		Renderer:  deps.Renderer,
 		PublicURL: deps.Cfg.PublicURL,
 	}
-	mux.HandleFunc("GET /friends", friends.GetOverview)
-	mux.HandleFunc("POST /friends/request/{id}", friends.Request)
-	mux.HandleFunc("POST /friends/accept/{id}", friends.Accept)
-	mux.HandleFunc("POST /friends/reject/{id}", friends.Reject)
-	mux.HandleFunc("POST /friends/cancel/{id}", friends.Cancel)
-	mux.HandleFunc("POST /friends/remove/{id}", friends.Remove)
+	authed.HandleFunc("GET /friends", friends.GetOverview)
+	authed.HandleFunc("POST /friends/request/{id}", friends.Request)
+	authed.HandleFunc("POST /friends/accept/{id}", friends.Accept)
+	authed.HandleFunc("POST /friends/reject/{id}", friends.Reject)
+	authed.HandleFunc("POST /friends/cancel/{id}", friends.Cancel)
+	authed.HandleFunc("POST /friends/remove/{id}", friends.Remove)
 
 	settings := &handler.Settings{
 		Privacy:  deps.PrivacyService,
@@ -109,27 +111,27 @@ func New(deps Deps) *Server {
 		Renderer: deps.Renderer,
 	}
 	settingsHub := &handler.SettingsHub{Renderer: deps.Renderer}
-	mux.HandleFunc("GET /settings", settingsHub.Get)
-	mux.HandleFunc("GET /settings/privacy", func(w http.ResponseWriter, r *http.Request) {
+	authed.HandleFunc("GET /settings", settingsHub.Get)
+	authed.HandleFunc("GET /settings/privacy", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/settings", http.StatusFound)
 	})
-	mux.HandleFunc("GET /settings/privacy/wall", settings.GetPrivacy)
-	mux.HandleFunc("POST /settings/privacy/wall", settings.PostPrivacy)
-	mux.HandleFunc("GET /settings/bans", settings.GetBans)
-	mux.HandleFunc("POST /settings/bans/remove/{id}", settings.PostBanRemove)
-	mux.HandleFunc("POST /id/{id}/ban", settings.PostBanByID)
-	mux.HandleFunc("POST /id/{id}/unban", settings.PostUnbanByID)
+	authed.HandleFunc("GET /settings/privacy/wall", settings.GetPrivacy)
+	authed.HandleFunc("POST /settings/privacy/wall", settings.PostPrivacy)
+	authed.HandleFunc("GET /settings/bans", settings.GetBans)
+	authed.HandleFunc("POST /settings/bans/remove/{id}", settings.PostBanRemove)
+	authed.HandleFunc("POST /id/{id}/ban", settings.PostBanByID)
+	authed.HandleFunc("POST /id/{id}/unban", settings.PostUnbanByID)
 
 	profile := &handler.Profile{
 		Service:  deps.ProfileService,
 		Users:    deps.UserLookup,
 		Renderer: deps.Renderer,
 	}
-	mux.HandleFunc("GET /settings/profile", profile.GetSettings)
-	mux.HandleFunc("POST /settings/profile", profile.PostSettings)
-	mux.HandleFunc("GET /settings/privacy/profile", profile.GetPrivacy)
-	mux.HandleFunc("POST /settings/privacy/profile", profile.PostPrivacy)
-	mux.HandleFunc("GET /id/{id}/friends", profile.GetUserFriends)
+	authed.HandleFunc("GET /settings/profile", profile.GetSettings)
+	authed.HandleFunc("POST /settings/profile", profile.PostSettings)
+	authed.HandleFunc("GET /settings/privacy/profile", profile.GetPrivacy)
+	authed.HandleFunc("POST /settings/privacy/profile", profile.PostPrivacy)
+	authed.HandleFunc("GET /id/{id}/friends", profile.GetUserFriends)
 
 	graffiti := &handler.Graffiti{
 		Service:  deps.GraffitiService,
@@ -137,8 +139,8 @@ func New(deps Deps) *Server {
 		Users:    deps.UserLookup,
 		Renderer: deps.Renderer,
 	}
-	mux.HandleFunc("GET /graffiti/{id}", graffiti.GetEditor)
-	mux.HandleFunc("POST /graffiti/{id}", graffiti.PostCreate)
+	authed.HandleFunc("GET /graffiti/{id}", graffiti.GetEditor)
+	authed.HandleFunc("POST /graffiti/{id}", graffiti.PostCreate)
 
 	staticHandler := http.StripPrefix("/static/", http.FileServer(http.FS(deps.StaticFS)))
 	root.Handle("/static/", staticHandler)

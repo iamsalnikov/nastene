@@ -76,3 +76,8 @@ tasks:
     desc: Start SSH tunnel via pinggy
     cmds:
       - ssh -p 443 -R0:localhost:8080 a.pinggy.io
+
+  docker:build:
+    desc: Build prod Docker image locally
+    cmds:
+      - docker build -f .github/Dockerfile -t nastene:dev .

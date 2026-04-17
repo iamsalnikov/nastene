@@ -29,14 +29,15 @@ type Repo interface {
 }
 
 type Manager struct {
-	repo       Repo
-	users      UserRepo
-	cookieName string
-	ttl        time.Duration
+	repo         Repo
+	users        UserRepo
+	cookieName   string
+	cookieSecure bool
+	ttl          time.Duration
 }
 
-func NewManager(repo Repo, users UserRepo, cookieName string, ttl time.Duration) *Manager {
-	return &Manager{repo: repo, users: users, cookieName: cookieName, ttl: ttl}
+func NewManager(repo Repo, users UserRepo, cookieName string, cookieSecure bool, ttl time.Duration) *Manager {
+	return &Manager{repo: repo, users: users, cookieName: cookieName, cookieSecure: cookieSecure, ttl: ttl}
 }
 
 func (m *Manager) Issue(ctx context.Context, w http.ResponseWriter, userID int64) error {
@@ -54,6 +55,7 @@ func (m *Manager) Issue(ctx context.Context, w http.ResponseWriter, userID int64
 		Path:     "/",
 		Expires:  expires,
 		HttpOnly: true,
+		Secure:   m.cookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 	slog.Default().Info("session: issued",
@@ -80,6 +82,7 @@ func (m *Manager) Revoke(ctx context.Context, w http.ResponseWriter, r *http.Req
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   m.cookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 	return nil

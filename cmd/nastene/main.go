@@ -58,6 +58,11 @@ func run() error {
 	}
 	log.Info("postgres connected")
 
+	if err := runMigrations(cfg.DatabaseURL); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+	log.Info("migrations applied")
+
 	userRepo := repository.NewUserRepo(pool)
 	sessionRepo := repository.NewSessionRepo(pool)
 	privacyRepo := repository.NewPrivacyRepo(pool)
@@ -67,7 +72,7 @@ func run() error {
 	wallPostRepo := repository.NewWallPostRepo(pool)
 	commentRepo := repository.NewCommentRepo(pool)
 
-	sessions := session.NewManager(sessionRepo, userRepo, cfg.SessionCookieName, cfg.SessionTTL)
+	sessions := session.NewManager(sessionRepo, userRepo, cfg.SessionCookieName, cfg.SessionCookieSecure, cfg.SessionTTL)
 	authorizer := wall.NewAuthorizer(privacyRepo, friendRepo, banRepo)
 	wallService := wall.NewService(wallPostRepo, userRepo, commentRepo, friendRepo, authorizer)
 	friendsService := friends.NewService(friendRepo, userRepo)

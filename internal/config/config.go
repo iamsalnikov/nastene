@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	HTTPAddr          string
-	DatabaseURL       string
-	SessionCookieName string
-	SessionTTL        time.Duration
+	HTTPAddr            string
+	DatabaseURL         string
+	SessionCookieName   string
+	SessionCookieSecure bool
+	SessionTTL          time.Duration
 
 	S3Endpoint         string
 	S3Region           string
@@ -65,6 +66,13 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("parse SESSION_TTL %q: %w", ttlRaw, err)
 	}
 	cfg.SessionTTL = ttl
+
+	secureRaw := envOr("SESSION_COOKIE_SECURE", "false")
+	secure, err := strconv.ParseBool(secureRaw)
+	if err != nil {
+		return Config{}, fmt.Errorf("parse SESSION_COOKIE_SECURE %q: %w", secureRaw, err)
+	}
+	cfg.SessionCookieSecure = secure
 
 	useSSLRaw := envOr("S3_USE_SSL", "true")
 	useSSL, err := strconv.ParseBool(useSSLRaw)

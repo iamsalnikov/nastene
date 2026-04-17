@@ -31,14 +31,14 @@
 
     function touchPt(e) {
         const t = e.touches[0] || e.changedTouches[0];
-        const rect = canvas.getBoundingClientRect();
-        return { clientX: t.clientX - rect.left, clientY: t.clientY - rect.top, __touch: true };
+        return { clientX: t.clientX, clientY: t.clientY };
     }
 
     function pt(e) {
-        if (e.__touch) return { x: e.clientX, y: e.clientY };
         const rect = canvas.getBoundingClientRect();
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const sx = canvas.width / rect.width;
+        const sy = canvas.height / rect.height;
+        return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
     }
 
     function start(e) {

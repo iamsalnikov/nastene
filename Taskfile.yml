@@ -71,3 +71,8 @@ tasks:
     desc: 'Create new migration: task migrate-new -- name_here'
     cmds:
       - goose -dir {{.MIGRATIONS_DIR}} -s create {{.CLI_ARGS}} sql
+
+  dev:tunnel:
+    desc: Start SSH tunnel via pinggy
+    cmds:
+      - ssh -p 443 -R0:localhost:8080 a.pinggy.io

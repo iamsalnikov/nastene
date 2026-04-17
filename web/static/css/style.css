@@ -8,6 +8,8 @@ html, body {
     font-family: Verdana, Tahoma, Geneva, sans-serif;
     font-size: 11px;
     line-height: 1.45;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 a { color: #2b587a; text-decoration: none; }
@@ -243,19 +245,21 @@ button.link-button:hover { background: none; text-decoration: underline; }
     margin-bottom: 10px;
 }
 .profile-side__avatar {
-    width: 100%;
-    height: auto;
-    border: 1px solid #dfe3e8;
     display: block;
+    width: calc(100% + 16px);
+    height: auto;
+    margin: -8px -8px 8px;
+    border: 0;
 }
 .profile-side__edit { margin: 6px 0 2px; }
 .profile-side__presence { color: #55676d; margin: 2px 0 0; }
 .profile-side__title {
     font-size: 11px;
     color: #2b587a;
-    margin: 0 0 6px;
+    margin: -8px -8px 6px;
     background: #ecf0f5;
-    padding: 3px 6px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #dfe3e8;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -287,8 +291,7 @@ button.link-button:hover { background: none; text-decoration: underline; }
     font-weight: bold;
     margin: 12px -12px 6px;
     background: #ecf0f5;
-    padding: 3px 12px;
-    border-top: 1px solid #dfe3e8;
+    padding: 4px 12px;
     border-bottom: 1px solid #dfe3e8;
 }
 .profile-info { width: 100%; border-collapse: collapse; }
@@ -314,3 +317,38 @@ button.link-button:hover { background: none; text-decoration: underline; }
 
 .settings-nav { list-style: square; padding-left: 18px; }
 .settings-nav li { margin-bottom: 6px; }
+
+@media (max-width: 640px) {
+    #page { width: auto; border-left: 0; border-right: 0; }
+    #header-inner { flex-wrap: wrap; gap: 6px; }
+    #header .header-links a,
+    #header .header-links .inline { margin-left: 8px; }
+    #content { padding: 10px 6px 16px; }
+
+    .box { padding: 8px; }
+    .box.profile-header,
+    .box.wall-box { padding: 0; }
+
+    .form input[type="email"],
+    .form input[type="text"],
+    .form input[type="password"],
+    .form textarea,
+    .form select { width: 100%; max-width: 100%; }
+    .form textarea { width: 100%; }
+    .comment-form textarea { width: 100%; }
+
+    .profile-layout { flex-direction: column; align-items: stretch; }
+    .profile-layout__left { flex: 1 1 auto; width: 100%; }
+    .profile-layout__right { flex: 1 1 auto; width: 100%; }
+    .profile-info__label { width: auto; }
+
+    .profile-friends__list li { flex: 0 0 60px; min-width: 0; }
+    .profile-friends__list span { word-break: break-word; overflow-wrap: break-word; }
+
+    .friend-card { width: calc(50% - 4px); }
+
+    .wall-post { padding: 6px 0; gap: 6px; }
+
+    .graffiti-toolbar { flex-wrap: wrap; }
+    #graffiti-canvas { max-width: 100%; height: auto; }
+}

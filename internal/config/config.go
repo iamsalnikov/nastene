@@ -21,7 +21,16 @@ type Config struct {
 	S3UseSSL           bool
 	S3PresignTTL       time.Duration
 	S3AutoCreateBucket bool
+
+	InvitesPerUser   int
+	RegistrationMode string
+	PublicURL        string
 }
+
+const (
+	RegistrationModeInvite = "invite"
+	RegistrationModeOpen   = "open"
+)
 
 func Load() (Config, error) {
 	cfg := Config{
@@ -77,6 +86,21 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("parse S3_AUTO_CREATE_BUCKET %q: %w", autoCreateRaw, err)
 	}
 	cfg.S3AutoCreateBucket = autoCreate
+
+	cfg.PublicURL = os.Getenv("PUBLIC_URL")
+
+	invitesRaw := envOr("INVITES_PER_USER", "2")
+	invites, err := strconv.Atoi(invitesRaw)
+	if err != nil || invites < 0 {
+		return Config{}, fmt.Errorf("parse INVITES_PER_USER %q: must be a non-negative integer", invitesRaw)
+	}
+	cfg.InvitesPerUser = invites
+
+	mode := envOr("REGISTRATION_MODE", RegistrationModeInvite)
+	if mode != RegistrationModeInvite && mode != RegistrationModeOpen {
+		return Config{}, fmt.Errorf("parse REGISTRATION_MODE %q: must be %q or %q", mode, RegistrationModeInvite, RegistrationModeOpen)
+	}
+	cfg.RegistrationMode = mode
 
 	return cfg, nil
 }

@@ -68,11 +68,11 @@ func run() error {
 	commentRepo := repository.NewCommentRepo(pool)
 
 	sessions := session.NewManager(sessionRepo, userRepo, cfg.SessionCookieName, cfg.SessionTTL)
-	authService := authsvc.NewService(userRepo)
 	authorizer := wall.NewAuthorizer(privacyRepo, friendRepo, banRepo)
 	wallService := wall.NewService(wallPostRepo, userRepo, commentRepo, friendRepo, authorizer)
 	friendsService := friends.NewService(friendRepo, userRepo)
 	friendsService.SetBanCheck(banRepo)
+	authService := authsvc.NewService(userRepo, friendsService, cfg.InvitesPerUser, cfg.RegistrationMode == config.RegistrationModeInvite)
 
 	objStore, err := objectstore.New(ctx, objectstore.Config{
 		Endpoint:         cfg.S3Endpoint,

@@ -9,4 +9,5 @@ var (
 	ErrForbidden           = errors.New("forbidden")
 	ErrInvalidInput        = errors.New("invalid input")
 	ErrSelfAction          = errors.New("self action not allowed")
+	ErrInvalidInvite       = errors.New("invalid invite")
 )

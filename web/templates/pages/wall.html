@@ -207,7 +207,7 @@
                                 </div>
                                 {{ end }}
 
-                                {{ if and $viewer $view.CanPost }}
+                                {{ if and $viewer $view.CanComment }}
                                 <form method="post" action="/post/{{ .Post.ID }}/comment" class="form comment-form">
                                     <input type="hidden" name="_csrf" value="{{ $csrf }}">
                                     <div class="row">

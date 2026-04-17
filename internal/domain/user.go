@@ -18,4 +18,8 @@ type User struct {
 	Bio        string
 	AvatarPath string
 	LastSeenAt *time.Time
+
+	InvitesRemaining int
+	InviteToken      string
+	InvitedByUserID  *int64
 }

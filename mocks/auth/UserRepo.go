@@ -79,9 +79,9 @@ func (_c *UserRepo_ByEmail_Call) RunAndReturn(run func(context.Context, string) 
 	return _c
 }
 
-// Create provides a mock function with given fields: ctx, email, passwordHash, displayName
-func (_m *UserRepo) Create(ctx context.Context, email string, passwordHash string, displayName string) (domain.User, error) {
-	ret := _m.Called(ctx, email, passwordHash, displayName)
+// Create provides a mock function with given fields: ctx, email, passwordHash, displayName, invitesRemaining, invitedByUserID
+func (_m *UserRepo) Create(ctx context.Context, email string, passwordHash string, displayName string, invitesRemaining int, invitedByUserID *int64) (domain.User, error) {
+	ret := _m.Called(ctx, email, passwordHash, displayName, invitesRemaining, invitedByUserID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -89,17 +89,17 @@ func (_m *UserRepo) Create(ctx context.Context, email string, passwordHash strin
 
 	var r0 domain.User
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (domain.User, error)); ok {
-		return rf(ctx, email, passwordHash, displayName)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, int, *int64) (domain.User, error)); ok {
+		return rf(ctx, email, passwordHash, displayName, invitesRemaining, invitedByUserID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) domain.User); ok {
-		r0 = rf(ctx, email, passwordHash, displayName)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, int, *int64) domain.User); ok {
+		r0 = rf(ctx, email, passwordHash, displayName, invitesRemaining, invitedByUserID)
 	} else {
 		r0 = ret.Get(0).(domain.User)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
-		r1 = rf(ctx, email, passwordHash, displayName)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, int, *int64) error); ok {
+		r1 = rf(ctx, email, passwordHash, displayName, invitesRemaining, invitedByUserID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,13 +117,15 @@ type UserRepo_Create_Call struct {
 //   - email string
 //   - passwordHash string
 //   - displayName string
-func (_e *UserRepo_Expecter) Create(ctx interface{}, email interface{}, passwordHash interface{}, displayName interface{}) *UserRepo_Create_Call {
-	return &UserRepo_Create_Call{Call: _e.mock.On("Create", ctx, email, passwordHash, displayName)}
+//   - invitesRemaining int
+//   - invitedByUserID *int64
+func (_e *UserRepo_Expecter) Create(ctx interface{}, email interface{}, passwordHash interface{}, displayName interface{}, invitesRemaining interface{}, invitedByUserID interface{}) *UserRepo_Create_Call {
+	return &UserRepo_Create_Call{Call: _e.mock.On("Create", ctx, email, passwordHash, displayName, invitesRemaining, invitedByUserID)}
 }
 
-func (_c *UserRepo_Create_Call) Run(run func(ctx context.Context, email string, passwordHash string, displayName string)) *UserRepo_Create_Call {
+func (_c *UserRepo_Create_Call) Run(run func(ctx context.Context, email string, passwordHash string, displayName string, invitesRemaining int, invitedByUserID *int64)) *UserRepo_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(int), args[5].(*int64))
 	})
 	return _c
 }
@@ -133,7 +135,75 @@ func (_c *UserRepo_Create_Call) Return(_a0 domain.User, _a1 error) *UserRepo_Cre
 	return _c
 }
 
-func (_c *UserRepo_Create_Call) RunAndReturn(run func(context.Context, string, string, string) (domain.User, error)) *UserRepo_Create_Call {
+func (_c *UserRepo_Create_Call) RunAndReturn(run func(context.Context, string, string, string, int, *int64) (domain.User, error)) *UserRepo_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateWithInvite provides a mock function with given fields: ctx, email, passwordHash, displayName, inviteToken, initialInvites
+func (_m *UserRepo) CreateWithInvite(ctx context.Context, email string, passwordHash string, displayName string, inviteToken string, initialInvites int) (domain.User, int64, error) {
+	ret := _m.Called(ctx, email, passwordHash, displayName, inviteToken, initialInvites)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateWithInvite")
+	}
+
+	var r0 domain.User
+	var r1 int64
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string, int) (domain.User, int64, error)); ok {
+		return rf(ctx, email, passwordHash, displayName, inviteToken, initialInvites)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, string, int) domain.User); ok {
+		r0 = rf(ctx, email, passwordHash, displayName, inviteToken, initialInvites)
+	} else {
+		r0 = ret.Get(0).(domain.User)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, string, int) int64); ok {
+		r1 = rf(ctx, email, passwordHash, displayName, inviteToken, initialInvites)
+	} else {
+		r1 = ret.Get(1).(int64)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, string, string, int) error); ok {
+		r2 = rf(ctx, email, passwordHash, displayName, inviteToken, initialInvites)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// UserRepo_CreateWithInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateWithInvite'
+type UserRepo_CreateWithInvite_Call struct {
+	*mock.Call
+}
+
+// CreateWithInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - email string
+//   - passwordHash string
+//   - displayName string
+//   - inviteToken string
+//   - initialInvites int
+func (_e *UserRepo_Expecter) CreateWithInvite(ctx interface{}, email interface{}, passwordHash interface{}, displayName interface{}, inviteToken interface{}, initialInvites interface{}) *UserRepo_CreateWithInvite_Call {
+	return &UserRepo_CreateWithInvite_Call{Call: _e.mock.On("CreateWithInvite", ctx, email, passwordHash, displayName, inviteToken, initialInvites)}
+}
+
+func (_c *UserRepo_CreateWithInvite_Call) Run(run func(ctx context.Context, email string, passwordHash string, displayName string, inviteToken string, initialInvites int)) *UserRepo_CreateWithInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(string), args[5].(int))
+	})
+	return _c
+}
+
+func (_c *UserRepo_CreateWithInvite_Call) Return(_a0 domain.User, _a1 int64, _a2 error) *UserRepo_CreateWithInvite_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *UserRepo_CreateWithInvite_Call) RunAndReturn(run func(context.Context, string, string, string, string, int) (domain.User, int64, error)) *UserRepo_CreateWithInvite_Call {
 	_c.Call.Return(run)
 	return _c
 }

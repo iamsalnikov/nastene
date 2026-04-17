@@ -16,6 +16,15 @@
             <select name="post_scope">
                 <option value="public" {{ if eq (print $p.PostScope) "public" }}selected{{ end }}>Все</option>
                 <option value="friends" {{ if eq (print $p.PostScope) "friends" }}selected{{ end }}>Только друзья</option>
+                <option value="nobody" {{ if eq (print $p.PostScope) "nobody" }}selected{{ end }}>Только я</option>
+            </select>
+        </div>
+        <div class="row">
+            <label>Кто может комментировать</label>
+            <select name="comment_scope">
+                <option value="public" {{ if eq (print $p.CommentScope) "public" }}selected{{ end }}>Все</option>
+                <option value="friends" {{ if eq (print $p.CommentScope) "friends" }}selected{{ end }}>Только друзья</option>
+                <option value="nobody" {{ if eq (print $p.CommentScope) "nobody" }}selected{{ end }}>Никто</option>
             </select>
         </div>
         <div class="row">

@@ -12,7 +12,7 @@ import (
 
 type PrivacyService interface {
 	Get(ctx context.Context, userID int64) (domain.WallPrivacy, error)
-	Update(ctx context.Context, userID int64, view, post domain.WallScope) error
+	Update(ctx context.Context, userID int64, view, post, comment domain.WallScope) error
 }
 
 type BanService interface {
@@ -33,8 +33,9 @@ type Settings struct {
 }
 
 type privacyForm struct {
-	ViewScope domain.WallScope
-	PostScope domain.WallScope
+	ViewScope    domain.WallScope
+	PostScope    domain.WallScope
+	CommentScope domain.WallScope
 }
 
 func (h *Settings) GetPrivacy(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +51,7 @@ func (h *Settings) GetPrivacy(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Renderer.Page(w, r, "privacy", render.PageData{
 		Title: "Приватность",
-		Data:  privacyForm{ViewScope: p.ViewScope, PostScope: p.PostScope},
+		Data:  privacyForm{ViewScope: p.ViewScope, PostScope: p.PostScope, CommentScope: p.CommentScope},
 	})
 }
 
@@ -66,11 +67,12 @@ func (h *Settings) PostPrivacy(w http.ResponseWriter, r *http.Request) {
 	}
 	view := domain.WallScope(r.PostFormValue("view_scope"))
 	post := domain.WallScope(r.PostFormValue("post_scope"))
-	if !view.Valid() || !post.Valid() {
+	comment := domain.WallScope(r.PostFormValue("comment_scope"))
+	if view == domain.ScopeNobody || !view.Valid() || !post.Valid() || !comment.Valid() {
 		http.Error(w, "invalid scope", http.StatusBadRequest)
 		return
 	}
-	if err := h.Privacy.Update(r.Context(), user.ID, view, post); err != nil {
+	if err := h.Privacy.Update(r.Context(), user.ID, view, post, comment); err != nil {
 		http.Error(w, fmt.Sprintf("update privacy: %v", err), http.StatusInternalServerError)
 		return
 	}

@@ -22,8 +22,9 @@ type FriendsService interface {
 }
 
 type Friends struct {
-	Service  FriendsService
-	Renderer *render.Renderer
+	Service   FriendsService
+	Renderer  *render.Renderer
+	PublicURL string
 }
 
 func (h *Friends) GetOverview(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,9 @@ func (h *Friends) GetOverview(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("friends overview: %v", err), http.StatusInternalServerError)
 		return
+	}
+	if ov.InviteToken != "" {
+		ov.InviteURL = h.PublicURL + "/register?invite=" + ov.InviteToken
 	}
 	h.Renderer.Page(w, r, "friends", render.PageData{Title: "Друзья", Data: ov})
 }

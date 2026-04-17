@@ -86,6 +86,7 @@ type WallView struct {
 	Banned      bool // owner забанил viewer
 	IBannedThem bool // viewer забанил owner
 	CanPost     bool
+	CanComment  bool
 	Posts       []PostView
 	NextPage    int
 	Friendship  FriendshipState
@@ -140,6 +141,11 @@ func (s *Service) LoadWall(ctx context.Context, viewerID, ownerID int64, limit, 
 	canPost, err := s.authorizer.CanPost(ctx, viewerID, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("load wall: can post: %w", err)
+	}
+
+	canComment, err := s.authorizer.CanComment(ctx, viewerID, ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("load wall: can comment: %w", err)
 	}
 
 	posts, err := s.posts.ListByWall(ctx, ownerID, limit+1, offset)
@@ -202,6 +208,7 @@ func (s *Service) LoadWall(ctx context.Context, viewerID, ownerID int64, limit, 
 		Banned:      false,
 		IBannedThem: iBannedThem,
 		CanPost:     canPost,
+		CanComment:  canComment,
 		Posts:       views,
 		NextPage:    nextPage,
 		Friendship:  fs,

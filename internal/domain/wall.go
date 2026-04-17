@@ -7,17 +7,19 @@ type WallScope string
 const (
 	ScopePublic  WallScope = "public"
 	ScopeFriends WallScope = "friends"
+	ScopeNobody  WallScope = "nobody"
 )
 
 func (s WallScope) Valid() bool {
-	return s == ScopePublic || s == ScopeFriends
+	return s == ScopePublic || s == ScopeFriends || s == ScopeNobody
 }
 
 type WallPrivacy struct {
-	UserID     int64
-	ViewScope  WallScope
-	PostScope  WallScope
-	UpdatedAt  time.Time
+	UserID       int64
+	ViewScope    WallScope
+	PostScope    WallScope
+	CommentScope WallScope
+	UpdatedAt    time.Time
 }
 
 type PostKind string

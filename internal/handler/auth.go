@@ -12,7 +12,7 @@ import (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, email, password, displayName string) (domain.User, error)
+	Register(ctx context.Context, email, password, displayName, inviteToken string) (domain.User, error)
 	Login(ctx context.Context, email, password string) (domain.User, error)
 }
 
@@ -38,7 +38,11 @@ func (h *Auth) GetRegister(w http.ResponseWriter, r *http.Request) {
 		redirectHome(w, r)
 		return
 	}
-	h.Renderer.Page(w, r, "register", render.PageData{Title: "Регистрация"})
+	invite := r.URL.Query().Get("invite")
+	h.Renderer.Page(w, r, "register", render.PageData{
+		Title: "Регистрация",
+		Data:  map[string]string{"InviteToken": invite},
+	})
 }
 
 func (h *Auth) PostRegister(w http.ResponseWriter, r *http.Request) {
@@ -49,8 +53,9 @@ func (h *Auth) PostRegister(w http.ResponseWriter, r *http.Request) {
 	email := r.PostFormValue("email")
 	password := r.PostFormValue("password")
 	displayName := r.PostFormValue("display_name")
+	invite := r.PostFormValue("invite")
 
-	user, err := h.Service.Register(r.Context(), email, password, displayName)
+	user, err := h.Service.Register(r.Context(), email, password, displayName, invite)
 	if err != nil {
 		h.Renderer.Page(w, r, "register", render.PageData{
 			Title: "Регистрация",
@@ -58,6 +63,7 @@ func (h *Auth) PostRegister(w http.ResponseWriter, r *http.Request) {
 			Data: map[string]string{
 				"Email":       email,
 				"DisplayName": displayName,
+				"InviteToken": invite,
 			},
 		})
 		return
@@ -138,6 +144,8 @@ func registerError(err error) string {
 		return "Этот e-mail уже занят"
 	case errors.Is(err, domain.ErrInvalidInput):
 		return "Проверьте поля: e-mail корректный, пароль ≥ 6 символов, имя ≥ 2 символов"
+	case errors.Is(err, domain.ErrInvalidInvite):
+		return "Ссылка-приглашение недействительна или уже использована"
 	default:
 		return "Не удалось зарегистрироваться, попробуйте позже"
 	}

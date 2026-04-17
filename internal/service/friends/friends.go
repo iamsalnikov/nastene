@@ -132,6 +132,10 @@ type Overview struct {
 	Friends  []OverviewPerson
 	Incoming []OverviewPerson
 	Outgoing []OverviewPerson
+
+	InvitesRemaining int
+	InviteToken      string
+	InviteURL        string
 }
 
 // Overview — для страницы /friends.
@@ -162,10 +166,18 @@ func (s *Service) Overview(ctx context.Context, userID int64) (*Overview, error)
 		return u, nil
 	}
 
+	self, err := s.users.ByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("overview self: %w", err)
+	}
+	cache[self.ID] = self
+
 	out := &Overview{
-		Friends:  make([]OverviewPerson, 0, len(friendIDs)),
-		Incoming: make([]OverviewPerson, 0, len(incoming)),
-		Outgoing: make([]OverviewPerson, 0, len(outgoing)),
+		Friends:          make([]OverviewPerson, 0, len(friendIDs)),
+		Incoming:         make([]OverviewPerson, 0, len(incoming)),
+		Outgoing:         make([]OverviewPerson, 0, len(outgoing)),
+		InvitesRemaining: self.InvitesRemaining,
+		InviteToken:      self.InviteToken,
 	}
 	for _, id := range friendIDs {
 		u, err := resolve(id)

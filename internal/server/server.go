@@ -91,8 +91,9 @@ func New(deps Deps) *Server {
 	mux.HandleFunc("POST /comment/{id}/delete", comment.DeleteComment)
 
 	friends := &handler.Friends{
-		Service:  deps.FriendsService,
-		Renderer: deps.Renderer,
+		Service:   deps.FriendsService,
+		Renderer:  deps.Renderer,
+		PublicURL: deps.Cfg.PublicURL,
 	}
 	mux.HandleFunc("GET /friends", friends.GetOverview)
 	mux.HandleFunc("POST /friends/request/{id}", friends.Request)

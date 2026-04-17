@@ -191,6 +191,40 @@ button.link-button:hover { background: none; text-decoration: underline; }
 }
 .friend-list li:last-child { border-bottom: 0; }
 
+.friend-cards {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.friend-card {
+    width: 110px;
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    padding: 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.friend-card__link { display: block; text-decoration: none; color: #2b587a; }
+.friend-card__avatar {
+    display: block;
+    border: 1px solid #dfe3e8;
+    object-fit: cover;
+    margin: 0 auto 4px;
+}
+.friend-card__name {
+    display: block;
+    font-size: 11px;
+    color: #2b587a;
+    word-break: break-word;
+}
+.friend-card__remove { margin: 0; }
+
 .profile-layout {
     display: flex;
     gap: 12px;

@@ -22,22 +22,24 @@ func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 }
 
 const userCols = `id, email, password_hash, display_name, created_at,
-		gender, birth_date, city, website, activity, quote, bio, avatar_path, last_seen_at`
+		gender, birth_date, city, website, activity, quote, bio, avatar_path, last_seen_at,
+		invites_remaining, invite_token, invited_by_user_id`
 
 func scanUser(row pgx.Row, u *domain.User) error {
 	return row.Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.CreatedAt,
 		&u.Gender, &u.BirthDate, &u.City, &u.Website, &u.Activity, &u.Quote, &u.Bio, &u.AvatarPath, &u.LastSeenAt,
+		&u.InvitesRemaining, &u.InviteToken, &u.InvitedByUserID,
 	)
 }
 
-func (r *UserRepo) Create(ctx context.Context, email, passwordHash, displayName string) (domain.User, error) {
+func (r *UserRepo) Create(ctx context.Context, email, passwordHash, displayName string, invitesRemaining int, invitedByUserID *int64) (domain.User, error) {
 	const q = `
-		INSERT INTO users (email, password_hash, display_name)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (email, password_hash, display_name, invites_remaining, invited_by_user_id)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING ` + userCols
 	var u domain.User
-	if err := scanUser(r.pool.QueryRow(ctx, q, email, passwordHash, displayName), &u); err != nil {
+	if err := scanUser(r.pool.QueryRow(ctx, q, email, passwordHash, displayName, invitesRemaining, invitedByUserID), &u); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return domain.User{}, fmt.Errorf("create user: %w", domain.ErrEmailAlreadyInUse)
@@ -45,6 +47,48 @@ func (r *UserRepo) Create(ctx context.Context, email, passwordHash, displayName 
 		return domain.User{}, fmt.Errorf("create user: %w", err)
 	}
 	return u, nil
+}
+
+// CreateWithInvite атомарно декрементит счётчик у владельца инвайта и создаёт нового юзера.
+// Возвращает ErrInvalidInvite, если токен не найден или инвайты израсходованы.
+func (r *UserRepo) CreateWithInvite(ctx context.Context, email, passwordHash, displayName, inviteToken string, initialInvites int) (domain.User, int64, error) {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return domain.User{}, 0, fmt.Errorf("create with invite: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const consumeQ = `
+		UPDATE users
+		SET invites_remaining = invites_remaining - 1
+		WHERE invite_token = $1 AND invites_remaining > 0
+		RETURNING id
+	`
+	var inviterID int64
+	if err := tx.QueryRow(ctx, consumeQ, inviteToken).Scan(&inviterID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, 0, fmt.Errorf("create with invite: %w", domain.ErrInvalidInvite)
+		}
+		return domain.User{}, 0, fmt.Errorf("create with invite: consume: %w", err)
+	}
+
+	const insertQ = `
+		INSERT INTO users (email, password_hash, display_name, invites_remaining, invited_by_user_id)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING ` + userCols
+	var u domain.User
+	if err := scanUser(tx.QueryRow(ctx, insertQ, email, passwordHash, displayName, initialInvites, inviterID), &u); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.User{}, 0, fmt.Errorf("create with invite: %w", domain.ErrEmailAlreadyInUse)
+		}
+		return domain.User{}, 0, fmt.Errorf("create with invite: insert: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.User{}, 0, fmt.Errorf("create with invite: commit: %w", err)
+	}
+	return u, inviterID, nil
 }
 
 func (r *UserRepo) ByID(ctx context.Context, id int64) (domain.User, error) {

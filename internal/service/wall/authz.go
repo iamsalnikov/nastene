@@ -81,9 +81,23 @@ func (a *Authorizer) CanPost(ctx context.Context, authorID, ownerID int64) (bool
 	return a.scopeSatisfied(ctx, p.PostScope, authorID, ownerID)
 }
 
-// CanComment mirrors CanPost — если нельзя писать на стене, то и комментировать нельзя.
+// CanComment reports whether author can leave a comment on a post on ownerID's wall.
 func (a *Authorizer) CanComment(ctx context.Context, authorID, ownerID int64) (bool, error) {
-	return a.CanPost(ctx, authorID, ownerID)
+	if authorID == ownerID {
+		return true, nil
+	}
+	banned, err := a.bans.IsBanned(ctx, ownerID, authorID)
+	if err != nil {
+		return false, fmt.Errorf("can comment: check ban: %w", err)
+	}
+	if banned {
+		return false, nil
+	}
+	p, err := a.privacy.Get(ctx, ownerID)
+	if err != nil {
+		return false, fmt.Errorf("can comment: get privacy: %w", err)
+	}
+	return a.scopeSatisfied(ctx, p.CommentScope, authorID, ownerID)
 }
 
 func (a *Authorizer) scopeSatisfied(ctx context.Context, scope domain.WallScope, actorID, ownerID int64) (bool, error) {
@@ -96,6 +110,8 @@ func (a *Authorizer) scopeSatisfied(ctx context.Context, scope domain.WallScope,
 			return false, fmt.Errorf("scope friends check: %w", err)
 		}
 		return friends, nil
+	case domain.ScopeNobody:
+		return false, nil
 	default:
 		return false, fmt.Errorf("unknown wall scope: %q", scope)
 	}

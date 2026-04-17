@@ -1,22 +1,15 @@
 {{ define "content" }}
 {{ $ov := .Data }}
 {{ $csrf := .CSRFToken }}
+
 <div class="box">
-    <h1>Друзья</h1>
-    {{ if $ov.Friends }}
-    <ul class="friend-list">
-        {{ range $ov.Friends }}
-        <li>
-            <a href="/id{{ .User.ID }}">{{ .User.DisplayName }}</a>
-            <form method="post" action="/friends/remove/{{ .User.ID }}" class="inline">
-                <input type="hidden" name="_csrf" value="{{ $csrf }}">
-                <button type="submit" class="link-button meta">убрать</button>
-            </form>
-        </li>
-        {{ end }}
-    </ul>
+    <h1>Мои приглашения</h1>
+    {{ if gt $ov.InvitesRemaining 0 }}
+    <p>Осталось инвайтов: <strong>{{ $ov.InvitesRemaining }}</strong>.</p>
+    <p class="hint">Поделитесь ссылкой:</p>
+    <p><code>{{ $ov.InviteURL }}</code></p>
     {{ else }}
-    <p class="hint">Пока никого.</p>
+    <p class="hint">Инвайты закончились.</p>
     {{ end }}
 </div>
 
@@ -59,4 +52,26 @@
     </ul>
 </div>
 {{ end }}
+
+<div class="box">
+    <h1>Друзья</h1>
+    {{ if $ov.Friends }}
+    <ul class="friend-cards">
+        {{ range $ov.Friends }}
+        <li class="friend-card">
+            <a class="friend-card__link" href="/id{{ .User.ID }}">
+                <img class="friend-card__avatar" src="{{ avatarURL .User.AvatarPath }}" alt="" width="90" height="90">
+                <span class="friend-card__name">{{ .User.DisplayName }}</span>
+            </a>
+            <form method="post" action="/friends/remove/{{ .User.ID }}" class="friend-card__remove">
+                <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                <button type="submit" class="link-button meta">убрать</button>
+            </form>
+        </li>
+        {{ end }}
+    </ul>
+    {{ else }}
+    <p class="hint">Пока никого.</p>
+    {{ end }}
+</div>
 {{ end }}

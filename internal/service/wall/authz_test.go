@@ -136,6 +136,15 @@ func TestAuthorizer_CanPost(t *testing.T) {
 			},
 			want: false,
 		},
+		"nobody post scope → no for non-owner": {
+			authorID: author,
+			setupMock: func(m authorizerMocks) {
+				m.bans.EXPECT().IsBanned(mock.Anything, owner, author).Return(false, nil).Once()
+				m.privacy.EXPECT().Get(mock.Anything, owner).
+					Return(domain.WallPrivacy{UserID: owner, ViewScope: domain.ScopePublic, PostScope: domain.ScopeNobody}, nil).Once()
+			},
+			want: false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -146,6 +155,72 @@ func TestAuthorizer_CanPost(t *testing.T) {
 			tc.setupMock(mocks)
 
 			got, err := authz.CanPost(context.Background(), tc.authorID, owner)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestAuthorizer_CanComment(t *testing.T) {
+	t.Parallel()
+
+	const owner, author = int64(10), int64(20)
+
+	tests := map[string]struct {
+		authorID  int64
+		setupMock func(m authorizerMocks)
+		want      bool
+	}{
+		"owner comments on own wall": {
+			authorID:  owner,
+			setupMock: func(m authorizerMocks) {},
+			want:      true,
+		},
+		"banned author can't comment": {
+			authorID: author,
+			setupMock: func(m authorizerMocks) {
+				m.bans.EXPECT().IsBanned(mock.Anything, owner, author).Return(true, nil).Once()
+			},
+			want: false,
+		},
+		"public comment scope → yes": {
+			authorID: author,
+			setupMock: func(m authorizerMocks) {
+				m.bans.EXPECT().IsBanned(mock.Anything, owner, author).Return(false, nil).Once()
+				m.privacy.EXPECT().Get(mock.Anything, owner).
+					Return(domain.WallPrivacy{UserID: owner, CommentScope: domain.ScopePublic}, nil).Once()
+			},
+			want: true,
+		},
+		"friends comment scope + friend → yes": {
+			authorID: author,
+			setupMock: func(m authorizerMocks) {
+				m.bans.EXPECT().IsBanned(mock.Anything, owner, author).Return(false, nil).Once()
+				m.privacy.EXPECT().Get(mock.Anything, owner).
+					Return(domain.WallPrivacy{UserID: owner, CommentScope: domain.ScopeFriends}, nil).Once()
+				m.friends.EXPECT().AreFriends(mock.Anything, author, owner).Return(true, nil).Once()
+			},
+			want: true,
+		},
+		"nobody comment scope → no for non-owner": {
+			authorID: author,
+			setupMock: func(m authorizerMocks) {
+				m.bans.EXPECT().IsBanned(mock.Anything, owner, author).Return(false, nil).Once()
+				m.privacy.EXPECT().Get(mock.Anything, owner).
+					Return(domain.WallPrivacy{UserID: owner, CommentScope: domain.ScopeNobody}, nil).Once()
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			authz, mocks := newAuthorizer(t)
+			tc.setupMock(mocks)
+
+			got, err := authz.CanComment(context.Background(), tc.authorID, owner)
 			require.NoError(t, err)
 			require.Equal(t, tc.want, got)
 		})

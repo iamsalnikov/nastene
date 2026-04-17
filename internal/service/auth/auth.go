@@ -14,21 +14,36 @@ import (
 )
 
 type UserRepo interface {
-	Create(ctx context.Context, email, passwordHash, displayName string) (domain.User, error)
+	Create(ctx context.Context, email, passwordHash, displayName string, invitesRemaining int, invitedByUserID *int64) (domain.User, error)
+	CreateWithInvite(ctx context.Context, email, passwordHash, displayName, inviteToken string, initialInvites int) (domain.User, int64, error)
 	ByEmail(ctx context.Context, email string) (domain.User, error)
 }
 
+// FriendRequester шлёт friend-request от нового юзера к приглашателю сразу после регистрации.
+type FriendRequester interface {
+	SendRequest(ctx context.Context, fromID, toID int64) error
+}
+
 type Service struct {
-	users UserRepo
+	users          UserRepo
+	friends        FriendRequester
+	invitesPerUser int
+	inviteOnly     bool
 }
 
-func NewService(users UserRepo) *Service {
-	return &Service{users: users}
+func NewService(users UserRepo, friends FriendRequester, invitesPerUser int, inviteOnly bool) *Service {
+	return &Service{
+		users:          users,
+		friends:        friends,
+		invitesPerUser: invitesPerUser,
+		inviteOnly:     inviteOnly,
+	}
 }
 
-func (s *Service) Register(ctx context.Context, email, password, displayName string) (domain.User, error) {
+func (s *Service) Register(ctx context.Context, email, password, displayName, inviteToken string) (domain.User, error) {
 	email = strings.TrimSpace(email)
 	displayName = strings.TrimSpace(displayName)
+	inviteToken = strings.TrimSpace(inviteToken)
 
 	if _, err := mail.ParseAddress(email); err != nil {
 		return domain.User{}, fmt.Errorf("register: invalid email: %w", domain.ErrInvalidInput)
@@ -45,10 +60,23 @@ func (s *Service) Register(ctx context.Context, email, password, displayName str
 		return domain.User{}, fmt.Errorf("register: hash password: %w", err)
 	}
 
-	u, err := s.users.Create(ctx, email, string(hash), displayName)
+	if inviteToken == "" {
+		if s.inviteOnly {
+			return domain.User{}, fmt.Errorf("register: invite required: %w", domain.ErrInvalidInvite)
+		}
+		u, err := s.users.Create(ctx, email, string(hash), displayName, s.invitesPerUser, nil)
+		if err != nil {
+			return domain.User{}, fmt.Errorf("register: %w", err)
+		}
+		return u, nil
+	}
+
+	u, inviterID, err := s.users.CreateWithInvite(ctx, email, string(hash), displayName, inviteToken, s.invitesPerUser)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("register: %w", err)
 	}
+	// friend-request — best-effort: если упадёт, регистрация всё равно успешна.
+	_ = s.friends.SendRequest(ctx, u.ID, inviterID)
 	return u, nil
 }
 

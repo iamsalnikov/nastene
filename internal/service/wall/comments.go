@@ -22,7 +22,7 @@ type CommentRepo interface {
 }
 
 // CreateComment — посетитель оставляет комментарий на посту.
-// Автор поста или хозяин стены и так могут комментировать, иначе проверяется CanComment (== CanView + не забанен).
+// Хозяин стены всегда может; иначе проверяется CanComment по CommentScope.
 func (s *Service) CreateComment(ctx context.Context, authorID, postID int64, body string) (domain.Comment, error) {
 	body = strings.TrimSpace(body)
 	l := utf8.RuneCountInString(body)

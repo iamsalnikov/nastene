@@ -22,7 +22,15 @@
       "Bash(podman compose *)",
       "Read(//Users/iamsalnikov/.config/containers/**)",
       "Read(//etc/**)",
-      "Bash(task up *)"
+      "Bash(task up *)",
+      "Bash(xargs ls *)",
+      "Bash(podman exec *)",
+      "Bash(task run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/healthz)",
+      "Bash(curl -s http://localhost:8080/register)",
+      "Bash(curl -s \"http://localhost:8080/register?invite=test-uuid-123\")",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"go run ./cmd/nastene\")"
     ]
   }
 }

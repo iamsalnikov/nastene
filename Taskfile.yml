@@ -14,17 +14,17 @@ tasks:
   up:
     desc: Start Postgres (podman/docker compose)
     cmds:
-      - '{{.COMPOSE | default "podman compose"}} up -d'
+      - podman-compose up -d
 
   down:
     desc: Stop Postgres
     cmds:
-      - '{{.COMPOSE | default "podman compose"}} down'
+      - podman-compose down
 
   logs:
     desc: Tail Postgres logs
     cmds:
-      - '{{.COMPOSE | default "podman compose"}} logs -f postgres'
+      - podman-compose logs -f postgres
 
   run:
     desc: Run the HTTP server

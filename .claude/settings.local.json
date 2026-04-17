@@ -12,7 +12,17 @@
       "Bash(PGPASSWORD=nastene psql -h localhost -p 5432 -U nastene -d nastene -c \"\\\\d profile_privacy\")",
       "Bash(go build *)",
       "Bash(go vet *)",
-      "Bash(go test *)"
+      "Bash(go test *)",
+      "Bash(go get *)",
+      "Bash(mockery --version)",
+      "Bash(gofmt *)",
+      "Read(//Users/iamsalnikov/.docker/**)",
+      "Bash(podman --version)",
+      "Bash(podman-compose --version)",
+      "Bash(podman compose *)",
+      "Read(//Users/iamsalnikov/.config/containers/**)",
+      "Read(//etc/**)",
+      "Bash(task up *)"
     ]
   }
 }

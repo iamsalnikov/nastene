@@ -168,7 +168,7 @@
                                     <span class="author"><a href="/id{{ .Author.ID }}">{{ .Author.DisplayName }}</a></span>
                                     <span class="meta">{{ formatDate .Post.CreatedAt }}</span>
                                 </div>
-                                <div class="body">{{ if eq (print .Post.Kind) "graffiti" }}<img class="graffiti-img" src="/uploads/{{ .Post.GraffitiPath }}" alt="граффити">{{ else }}{{ .Post.BodyText }}{{ end }}</div>
+                                <div class="body">{{ if eq (print .Post.Kind) "graffiti" }}<img class="graffiti-img" src="{{ graffitiURL .Post.GraffitiPath }}" alt="граффити">{{ else }}{{ .Post.BodyText }}{{ end }}</div>
                                 {{ if $canDelete }}
                                 <div class="wall-post__actions">
                                     <form method="post" action="/post/{{ .Post.ID }}/delete" class="inline" onsubmit="return confirm('Удалить пост?')">

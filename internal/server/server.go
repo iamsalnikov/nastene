@@ -37,7 +37,6 @@ type Deps struct {
 	ProfilePrivacy  handler.PrivacyInitializer
 	IncomingCounter render.IncomingCounter
 	StaticFS        fs.FS
-	UploadsDir      string
 }
 
 type Server struct {
@@ -142,9 +141,6 @@ func New(deps Deps) *Server {
 
 	staticHandler := http.StripPrefix("/static/", http.FileServer(http.FS(deps.StaticFS)))
 	root.Handle("/static/", staticHandler)
-
-	uploadsHandler := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.UploadsDir)))
-	root.Handle("/uploads/", uploadsHandler)
 
 	return &Server{
 		cfg: deps.Cfg,

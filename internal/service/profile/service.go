@@ -11,7 +11,7 @@ import (
 	_ "image/png"
 	"io"
 	"net/url"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -47,7 +47,7 @@ type FriendListRepo interface {
 }
 
 type AvatarStore interface {
-	Save(ctx context.Context, relPath string, data io.Reader) error
+	Save(ctx context.Context, key string, data io.Reader, size int64, contentType string) error
 }
 
 type Service struct {
@@ -216,12 +216,12 @@ func (s *Service) UpdateAvatar(ctx context.Context, userID int64, file io.Reader
 	if err != nil {
 		return "", fmt.Errorf("update avatar: decode: %w", domain.ErrInvalidInput)
 	}
-	ext := ""
+	var ext, mime string
 	switch format {
 	case "png":
-		ext = "png"
+		ext, mime = "png", "image/png"
 	case "jpeg":
-		ext = "jpg"
+		ext, mime = "jpg", "image/jpeg"
 	default:
 		return "", fmt.Errorf("update avatar: unsupported format %q: %w", format, domain.ErrInvalidInput)
 	}
@@ -230,15 +230,15 @@ func (s *Service) UpdateAvatar(ctx context.Context, userID int64, file io.Reader
 	if err != nil {
 		return "", fmt.Errorf("update avatar: name: %w", err)
 	}
-	rel := filepath.Join("avatars", fmt.Sprintf("%d-%s.%s", userID, suffix, ext))
+	key := path.Join("avatars", fmt.Sprintf("%d-%s.%s", userID, suffix, ext))
 
-	if err := s.store.Save(ctx, rel, bytesReader(raw)); err != nil {
+	if err := s.store.Save(ctx, key, bytesReader(raw), int64(len(raw)), mime); err != nil {
 		return "", fmt.Errorf("update avatar: save: %w", err)
 	}
-	if err := s.users.UpdateAvatar(ctx, userID, rel); err != nil {
+	if err := s.users.UpdateAvatar(ctx, userID, key); err != nil {
 		return "", fmt.Errorf("update avatar: db: %w", err)
 	}
-	return rel, nil
+	return key, nil
 }
 
 func (s *Service) GetPrivacy(ctx context.Context, userID int64) (domain.ProfilePrivacy, error) {

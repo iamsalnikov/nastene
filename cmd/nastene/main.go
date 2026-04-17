@@ -20,6 +20,7 @@ import (
 	"github.com/iamsalnikov/nastene/internal/service/profile"
 	"github.com/iamsalnikov/nastene/internal/service/wall"
 	"github.com/iamsalnikov/nastene/internal/session"
+	"github.com/iamsalnikov/nastene/internal/storage/objectstore"
 	"github.com/iamsalnikov/nastene/web"
 )
 
@@ -72,13 +73,28 @@ func run() error {
 	wallService := wall.NewService(wallPostRepo, userRepo, commentRepo, friendRepo, authorizer)
 	friendsService := friends.NewService(friendRepo, userRepo)
 	friendsService.SetBanCheck(banRepo)
-	uploadStore := &wall.DiskStore{BaseDir: cfg.UploadsDir}
+
+	objStore, err := objectstore.New(ctx, objectstore.Config{
+		Endpoint:         cfg.S3Endpoint,
+		Region:           cfg.S3Region,
+		AccessKey:        cfg.S3AccessKey,
+		SecretKey:        cfg.S3SecretKey,
+		Bucket:           cfg.S3Bucket,
+		UseSSL:           cfg.S3UseSSL,
+		PresignTTL:       cfg.S3PresignTTL,
+		AutoCreateBucket: cfg.S3AutoCreateBucket,
+	})
+	if err != nil {
+		return fmt.Errorf("init object store: %w", err)
+	}
+	log.Info("object store ready", "bucket", cfg.S3Bucket, "endpoint", cfg.S3Endpoint)
+
 	postResolver := repository.NewPostOwnerResolver(wallPostRepo)
 
 	profileAuthorizer := profile.NewAuthorizer(profilePrivacyRepo, friendRepo, banRepo)
-	profileService := profile.NewService(userRepo, profilePrivacyRepo, friendRepo, profileAuthorizer, uploadStore)
+	profileService := profile.NewService(userRepo, profilePrivacyRepo, friendRepo, profileAuthorizer, objStore)
 
-	renderer, err := render.New(web.FS)
+	renderer, err := render.New(web.FS, objStore)
 	if err != nil {
 		return fmt.Errorf("load templates: %w", err)
 	}
@@ -103,13 +119,12 @@ func run() error {
 		UserLookup:      userRepo,
 		PostOwner:       postResolver,
 		GraffitiService: wallService,
-		GraffitiStore:   uploadStore,
+		GraffitiStore:   objStore,
 		Privacy:         privacyRepo,
 		ProfileService:  profileService,
 		ProfilePrivacy:  profilePrivacyRepo,
 		IncomingCounter: friendRepo,
 		StaticFS:        staticFS,
-		UploadsDir:      cfg.UploadsDir,
 	})
 
 	if err := srv.Run(ctx); err != nil {

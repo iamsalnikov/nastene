@@ -7,14 +7,6 @@ import (
 
 const defaultAvatarURL = "/static/img/avatar_default.svg"
 
-// AvatarURL — путь к аватару пользователя; пусто → дефолтная заглушка.
-func AvatarURL(path string) string {
-	if path == "" {
-		return defaultAvatarURL
-	}
-	return "/uploads/" + path
-}
-
 // Presence форматирует last_seen_at в человекочитаемую строку для шапки профиля.
 // nil → «давно», <5 мин → «онлайн», иначе «был N мин/ч/д назад».
 func Presence(t *time.Time) string {

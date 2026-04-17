@@ -22,17 +22,17 @@ func (_m *GraffitiStore) EXPECT() *GraffitiStore_Expecter {
 	return &GraffitiStore_Expecter{mock: &_m.Mock}
 }
 
-// Save provides a mock function with given fields: ctx, relPath, data
-func (_m *GraffitiStore) Save(ctx context.Context, relPath string, data io.Reader) error {
-	ret := _m.Called(ctx, relPath, data)
+// Save provides a mock function with given fields: ctx, key, data, size, contentType
+func (_m *GraffitiStore) Save(ctx context.Context, key string, data io.Reader, size int64, contentType string) error {
+	ret := _m.Called(ctx, key, data, size, contentType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader) error); ok {
-		r0 = rf(ctx, relPath, data)
+	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader, int64, string) error); ok {
+		r0 = rf(ctx, key, data, size, contentType)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -47,15 +47,17 @@ type GraffitiStore_Save_Call struct {
 
 // Save is a helper method to define mock.On call
 //   - ctx context.Context
-//   - relPath string
+//   - key string
 //   - data io.Reader
-func (_e *GraffitiStore_Expecter) Save(ctx interface{}, relPath interface{}, data interface{}) *GraffitiStore_Save_Call {
-	return &GraffitiStore_Save_Call{Call: _e.mock.On("Save", ctx, relPath, data)}
+//   - size int64
+//   - contentType string
+func (_e *GraffitiStore_Expecter) Save(ctx interface{}, key interface{}, data interface{}, size interface{}, contentType interface{}) *GraffitiStore_Save_Call {
+	return &GraffitiStore_Save_Call{Call: _e.mock.On("Save", ctx, key, data, size, contentType)}
 }
 
-func (_c *GraffitiStore_Save_Call) Run(run func(ctx context.Context, relPath string, data io.Reader)) *GraffitiStore_Save_Call {
+func (_c *GraffitiStore_Save_Call) Run(run func(ctx context.Context, key string, data io.Reader, size int64, contentType string)) *GraffitiStore_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(io.Reader))
+		run(args[0].(context.Context), args[1].(string), args[2].(io.Reader), args[3].(int64), args[4].(string))
 	})
 	return _c
 }
@@ -65,7 +67,7 @@ func (_c *GraffitiStore_Save_Call) Return(_a0 error) *GraffitiStore_Save_Call {
 	return _c
 }
 
-func (_c *GraffitiStore_Save_Call) RunAndReturn(run func(context.Context, string, io.Reader) error) *GraffitiStore_Save_Call {
+func (_c *GraffitiStore_Save_Call) RunAndReturn(run func(context.Context, string, io.Reader, int64, string) error) *GraffitiStore_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

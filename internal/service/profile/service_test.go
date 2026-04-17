@@ -176,7 +176,7 @@ func TestService_UpdateAvatar_AcceptsPNG(t *testing.T) {
 	require.NoError(t, png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 4, 4))))
 	m.store.EXPECT().Save(mock.Anything, mock.MatchedBy(func(rel string) bool {
 		return len(rel) > len("avatars/10-") && rel[:11] == "avatars/10-" && rel[len(rel)-4:] == ".png"
-	}), mock.Anything).Return(nil).Once()
+	}), mock.Anything, mock.AnythingOfType("int64"), "image/png").Return(nil).Once()
 	m.users.EXPECT().UpdateAvatar(mock.Anything, int64(10), mock.AnythingOfType("string")).Return(nil).Once()
 
 	path, err := svc.UpdateAvatar(context.Background(), 10, &buf)

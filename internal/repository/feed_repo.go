@@ -118,7 +118,7 @@ func (r *FeedRepo) DeleteForBan(ctx context.Context, a, b int64) error {
 	const q = `
 		DELETE FROM news_feed f
 		USING wall_posts p
-		LEFT JOIN comments c ON c.id IS NOT NULL
+		LEFT JOIN comments c ON c.id = f.comment_id
 		WHERE p.id = f.post_id
 		  AND (f.comment_id IS NULL OR c.id = f.comment_id)
 		  AND (

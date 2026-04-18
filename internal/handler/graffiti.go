@@ -95,6 +95,8 @@ func (h *Graffiti) PostCreate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "вам нельзя писать на этой стене", http.StatusForbidden)
 		case errors.Is(err, domain.ErrInvalidInput):
 			http.Error(w, "картинка невалидна или слишком большая", http.StatusBadRequest)
+		case errors.Is(err, domain.ErrRateLimited):
+			http.Error(w, "слишком часто: лимит постов в час исчерпан, попробуйте позже", http.StatusTooManyRequests)
 		default:
 			http.Error(w, fmt.Sprintf("create graffiti: %v", err), http.StatusInternalServerError)
 		}

@@ -10,4 +10,5 @@ var (
 	ErrInvalidInput        = errors.New("invalid input")
 	ErrSelfAction          = errors.New("self action not allowed")
 	ErrInvalidInvite       = errors.New("invalid invite")
+	ErrRateLimited         = errors.New("rate limited")
 )

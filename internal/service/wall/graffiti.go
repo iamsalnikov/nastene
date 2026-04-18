@@ -32,6 +32,10 @@ func (s *Service) CreateGraffitiPost(ctx context.Context, authorID, ownerID int6
 		return domain.WallPost{}, fmt.Errorf("create graffiti: %w", domain.ErrForbidden)
 	}
 
+	if err := s.checkPostLimit(ctx, authorID); err != nil {
+		return domain.WallPost{}, fmt.Errorf("create graffiti: %w", err)
+	}
+
 	limited := io.LimitReader(pngData, maxGraffitiBytes+1)
 	raw, err := io.ReadAll(limited)
 	if err != nil {

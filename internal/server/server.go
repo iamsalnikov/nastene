@@ -52,6 +52,7 @@ func New(deps Deps) *Server {
 	mux.Use(requestLogger(deps.Log))
 	mux.Use(deps.Sessions.Middleware)
 	mux.Use(render.CSRFMiddleware)
+	mux.Use(render.TimezoneMiddleware)
 	if deps.IncomingCounter != nil {
 		mux.Use(render.HeaderStatsMiddleware(deps.IncomingCounter))
 	}

@@ -10,6 +10,10 @@ const defaultAvatarURL = "/static/img/avatar_default.svg"
 // Presence форматирует last_seen_at в человекочитаемую строку для шапки профиля.
 // nil → «давно», <5 мин → «онлайн», иначе «был N мин/ч/д назад».
 func Presence(t *time.Time) string {
+	return presenceIn(t, defaultLocation)
+}
+
+func presenceIn(t *time.Time, loc *time.Location) string {
 	if t == nil {
 		return "давно не заходил"
 	}
@@ -24,7 +28,7 @@ func Presence(t *time.Time) string {
 	case d < 30*24*time.Hour:
 		return fmt.Sprintf("был %d дн назад", int(d.Hours()/24))
 	default:
-		return "был " + t.Local().Format("2 Jan 2006")
+		return "был " + formatDayRU(*t, loc)
 	}
 }
 
@@ -32,7 +36,7 @@ func FormatBirthDate(t *time.Time) string {
 	if t == nil {
 		return ""
 	}
-	return t.Format("2 January 2006")
+	return formatBirthdateRU(*t)
 }
 
 func minInt(a, b int) int {

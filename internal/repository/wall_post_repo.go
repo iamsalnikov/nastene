@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,6 +75,15 @@ func (r *WallPostRepo) ListByWall(ctx context.Context, ownerID int64, limit, off
 		return nil, fmt.Errorf("rows: %w", err)
 	}
 	return out, nil
+}
+
+func (r *WallPostRepo) CountByAuthorSince(ctx context.Context, authorID int64, since time.Time) (int, error) {
+	const q = `SELECT COUNT(*) FROM wall_posts WHERE author_id = $1 AND created_at >= $2`
+	var n int
+	if err := r.pool.QueryRow(ctx, q, authorID, since).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count wall posts by author since: %w", err)
+	}
+	return n, nil
 }
 
 func (r *WallPostRepo) Delete(ctx context.Context, id int64) error {

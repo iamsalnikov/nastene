@@ -115,6 +115,48 @@ func TestService_Get_SelfSeesEverything(t *testing.T) {
 	require.Equal(t, "hello", view.User.Bio)
 }
 
+func TestService_Get_MasksFriendAvatars(t *testing.T) {
+	t.Parallel()
+	const owner, viewer = int64(10), int64(20)
+	const friendA, friendB = int64(30), int64(31)
+
+	svc, m := newService(t)
+	m.users.EXPECT().ByID(mock.Anything, int64(owner)).Return(ownerUser(), nil).Once()
+	// Visibility: not banned in either direction, everything public so friends list visible.
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, int64(owner), int64(viewer)).Return(false, nil).Once()
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, int64(viewer), int64(owner)).Return(false, nil).Once()
+	everythingPublic := domain.ProfilePrivacy{
+		OnlineScope: domain.ProfileScopeEveryone, BasicScope: domain.ProfileScopeEveryone,
+		FriendsScope: domain.ProfileScopeEveryone, BioScope: domain.ProfileScopeEveryone,
+	}
+	m.authz.privacy.EXPECT().Get(mock.Anything, int64(owner)).Return(everythingPublic, nil).Once()
+	m.privacy.EXPECT().Get(mock.Anything, int64(owner)).Return(everythingPublic, nil).Once()
+
+	m.friends.EXPECT().ListFriendIDs(mock.Anything, int64(owner)).Return([]int64{friendA, friendB}, nil).Once()
+	m.users.EXPECT().ByID(mock.Anything, friendA).
+		Return(domain.User{ID: friendA, DisplayName: "A", AvatarPath: "avatars/a.png"}, nil).Once()
+	m.users.EXPECT().ByID(mock.Anything, friendB).
+		Return(domain.User{ID: friendB, DisplayName: "B", AvatarPath: "avatars/b.png"}, nil).Once()
+
+	// friendA: viewer cannot see avatar. friendB: can.
+	// CanSeeAvatar → Visibility(viewer, friendA). Neither banned, privacy Nobody scope → Basic=false.
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, friendA, int64(viewer)).Return(false, nil).Once()
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, int64(viewer), friendA).Return(false, nil).Once()
+	m.authz.privacy.EXPECT().Get(mock.Anything, friendA).Return(domain.ProfilePrivacy{
+		OnlineScope: domain.ProfileScopeNobody, BasicScope: domain.ProfileScopeNobody,
+		FriendsScope: domain.ProfileScopeNobody, BioScope: domain.ProfileScopeNobody,
+	}, nil).Once()
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, friendB, int64(viewer)).Return(false, nil).Once()
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, int64(viewer), friendB).Return(false, nil).Once()
+	m.authz.privacy.EXPECT().Get(mock.Anything, friendB).Return(everythingPublic, nil).Once()
+
+	view, err := svc.Get(context.Background(), viewer, owner)
+	require.NoError(t, err)
+	require.Len(t, view.Friends, 2)
+	require.Empty(t, view.Friends[0].AvatarPath, "friend A avatar must be masked by privacy")
+	require.Equal(t, "avatars/b.png", view.Friends[1].AvatarPath, "friend B avatar remains visible")
+}
+
 func TestService_UpdateProfile_Validation(t *testing.T) {
 	t.Parallel()
 	future := time.Now().Add(48 * time.Hour)

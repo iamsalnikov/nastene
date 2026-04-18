@@ -59,9 +59,18 @@ func (s *Service) LoadPost(ctx context.Context, viewerID, postID int64) (*PostDe
 		return u, nil
 	}
 
+	mask, err := s.avatarMasker(ctx, viewerID)
+	if err != nil {
+		return nil, fmt.Errorf("load post: avatar masker: %w", err)
+	}
+
 	author, err := resolve(post.AuthorID)
 	if err != nil {
 		return nil, fmt.Errorf("load post: author: %w", err)
+	}
+	maskedAuthor, err := mask(author)
+	if err != nil {
+		return nil, fmt.Errorf("load post: mask author: %w", err)
 	}
 
 	rawComments, err := s.comments.ListByPosts(ctx, []int64{post.ID})
@@ -87,7 +96,11 @@ func (s *Service) LoadPost(ctx context.Context, viewerID, postID int64) (*PostDe
 		if err != nil {
 			return nil, fmt.Errorf("load post: comment author %d: %w", c.AuthorID, err)
 		}
-		commentViews = append(commentViews, CommentView{Comment: c, Author: ca})
+		maskedCA, err := mask(ca)
+		if err != nil {
+			return nil, fmt.Errorf("load post: mask comment author %d: %w", c.AuthorID, err)
+		}
+		commentViews = append(commentViews, CommentView{Comment: c, Author: maskedCA})
 	}
 
 	canComment, err := s.authorizer.CanComment(ctx, viewerID, post.WallOwnerID)
@@ -97,10 +110,15 @@ func (s *Service) LoadPost(ctx context.Context, viewerID, postID int64) (*PostDe
 
 	canDelete := viewerID == post.AuthorID || viewerID == post.WallOwnerID
 
+	maskedOwner, err := mask(owner)
+	if err != nil {
+		return nil, fmt.Errorf("load post: mask owner: %w", err)
+	}
+
 	return &PostDetail{
 		Post:       post,
-		Author:     author,
-		Owner:      owner,
+		Author:     maskedAuthor,
+		Owner:      maskedOwner,
 		Comments:   commentViews,
 		CanComment: canComment,
 		CanDelete:  canDelete,

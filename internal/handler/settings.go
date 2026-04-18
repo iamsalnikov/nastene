@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/iamsalnikov/nastene/internal/domain"
 	"github.com/iamsalnikov/nastene/internal/render"
@@ -82,7 +83,7 @@ func (h *Settings) PostPrivacy(w http.ResponseWriter, r *http.Request) {
 type banRow struct {
 	BannedID  int64
 	User      domain.User
-	CreatedAt string
+	CreatedAt time.Time
 }
 
 func (h *Settings) GetBans(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +103,7 @@ func (h *Settings) GetBans(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		rows = append(rows, banRow{BannedID: b.BannedID, User: u, CreatedAt: b.CreatedAt.Format("2 Jan 2006")})
+		rows = append(rows, banRow{BannedID: b.BannedID, User: u, CreatedAt: b.CreatedAt})
 	}
 	h.Renderer.Page(w, r, "bans", render.PageData{Title: "Бан-лист", Data: rows})
 }

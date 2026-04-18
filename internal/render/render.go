@@ -61,6 +61,7 @@ func New(fsys fs.FS, presigner URLPresigner) (*Renderer, error) {
 
 	funcs := template.FuncMap{
 		"formatDate":  formatDate,
+		"formatDay":   formatDay,
 		"trim":        strings.TrimSpace,
 		"abbrev":      AbbrevCount,
 		"presence":    Presence,
@@ -115,6 +116,11 @@ func (r *Renderer) Page(w http.ResponseWriter, req *http.Request, name string, p
 	if pd.IncomingRequests == 0 {
 		pd.IncomingRequests = IncomingFromContext(req.Context())
 	}
+	t, err := localizedTemplate(t, req.Context())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("clone template: %v", err), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "base.html", pd); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -127,18 +133,44 @@ func (r *Renderer) Fragment(w http.ResponseWriter, req *http.Request, page, frag
 		http.Error(w, fmt.Sprintf("template %s not found", page), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	pd := PageData{Data: data, CSRFToken: CSRFFromContext(req.Context())}
 	if u, ok := session.FromContext(req.Context()); ok {
 		pd.User = &u
 	}
+	t, err := localizedTemplate(t, req.Context())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("clone template: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, fragment, pd); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
+// localizedTemplate clones t and overrides time-formatting funcs so they render
+// in the requester's timezone (read from ctx via LocationFromContext).
+// Clone is cheap — it re-uses parse trees; only the FuncMap is per-request.
+func localizedTemplate(t *template.Template, ctx context.Context) (*template.Template, error) {
+	loc := LocationFromContext(ctx)
+	ct, err := t.Clone()
+	if err != nil {
+		return nil, fmt.Errorf("clone template: %w", err)
+	}
+	ct = ct.Funcs(template.FuncMap{
+		"formatDate": func(at time.Time) string { return formatDateRU(at, loc) },
+		"formatDay":  func(at time.Time) string { return formatDayRU(at, loc) },
+		"presence":   func(at *time.Time) string { return presenceIn(at, loc) },
+	})
+	return ct, nil
+}
+
 func formatDate(t time.Time) string {
-	return t.Local().Format("2 Jan 2006, 15:04")
+	return formatDateRU(t, defaultLocation)
+}
+
+func formatDay(t time.Time) string {
+	return formatDayRU(t, defaultLocation)
 }
 
 type csrfKey struct{}

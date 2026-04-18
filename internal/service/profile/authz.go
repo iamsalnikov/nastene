@@ -143,3 +143,8 @@ func (a *Authorizer) CanSee(ctx context.Context, viewerID, ownerID int64, f doma
 		return false, fmt.Errorf("can see: unknown field %d", f)
 	}
 }
+
+// CanSeeAvatar — видит ли viewer аватар/основные поля ownerID. Аватар в BasicScope.
+func (a *Authorizer) CanSeeAvatar(ctx context.Context, viewerID, ownerID int64) (bool, error) {
+	return a.CanSee(ctx, viewerID, ownerID, domain.ProfileFieldBasic)
+}

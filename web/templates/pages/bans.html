@@ -8,7 +8,7 @@
         {{ range $rows }}
         <li>
             <a href="/id{{ .User.ID }}">{{ .User.DisplayName }}</a>
-            <span class="meta">{{ .CreatedAt }}</span>
+            <span class="meta">{{ formatDay .CreatedAt }}</span>
             <form method="post" action="/settings/bans/remove/{{ .BannedID }}" class="inline">
                 <input type="hidden" name="_csrf" value="{{ $csrf }}">
                 <button type="submit" class="link-button meta">разбанить</button>

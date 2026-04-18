@@ -26,6 +26,9 @@ type Config struct {
 	InvitesPerUser   int
 	RegistrationMode string
 
+	RateLimitPostsPerHour    int
+	RateLimitCommentsPerHour int
+
 	RabbitMQDSN   string
 	ConsumerGroup string
 }
@@ -109,6 +112,20 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("parse REGISTRATION_MODE %q: must be %q or %q", mode, RegistrationModeInvite, RegistrationModeOpen)
 	}
 	cfg.RegistrationMode = mode
+
+	postsLimitRaw := envOr("RATE_LIMIT_POSTS_PER_HOUR", "60")
+	postsLimit, err := strconv.Atoi(postsLimitRaw)
+	if err != nil || postsLimit < 0 {
+		return Config{}, fmt.Errorf("parse RATE_LIMIT_POSTS_PER_HOUR %q: must be a non-negative integer", postsLimitRaw)
+	}
+	cfg.RateLimitPostsPerHour = postsLimit
+
+	commentsLimitRaw := envOr("RATE_LIMIT_COMMENTS_PER_HOUR", "120")
+	commentsLimit, err := strconv.Atoi(commentsLimitRaw)
+	if err != nil || commentsLimit < 0 {
+		return Config{}, fmt.Errorf("parse RATE_LIMIT_COMMENTS_PER_HOUR %q: must be a non-negative integer", commentsLimitRaw)
+	}
+	cfg.RateLimitCommentsPerHour = commentsLimit
 
 	cfg.RabbitMQDSN = os.Getenv("RABBITMQ_DSN")
 	if cfg.RabbitMQDSN == "" {

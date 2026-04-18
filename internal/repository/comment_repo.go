@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -101,6 +102,15 @@ func (r *CommentRepo) DistinctAuthorsByPost(ctx context.Context, postID, exclude
 		return nil, fmt.Errorf("authors rows: %w", err)
 	}
 	return out, nil
+}
+
+func (r *CommentRepo) CountByAuthorSince(ctx context.Context, authorID int64, since time.Time) (int, error) {
+	const q = `SELECT COUNT(*) FROM comments WHERE author_id = $1 AND created_at >= $2`
+	var n int
+	if err := r.pool.QueryRow(ctx, q, authorID, since).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count comments by author since: %w", err)
+	}
+	return n, nil
 }
 
 func (r *CommentRepo) Delete(ctx context.Context, id int64) error {

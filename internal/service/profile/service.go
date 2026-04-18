@@ -125,6 +125,15 @@ func (s *Service) Get(ctx context.Context, viewerID, ownerID int64) (View, error
 			if err != nil {
 				continue
 			}
+			if u.AvatarPath != "" {
+				canSee, err := s.authorizer.CanSeeAvatar(ctx, viewerID, u.ID)
+				if err != nil {
+					return View{}, fmt.Errorf("profile get: friend avatar %d: %w", u.ID, err)
+				}
+				if !canSee {
+					u.AvatarPath = ""
+				}
+			}
 			view.Friends = append(view.Friends, u)
 		}
 	}

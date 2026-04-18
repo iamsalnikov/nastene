@@ -178,6 +178,9 @@ button.link-button:hover { background: none; text-decoration: underline; }
 .wall-post__actions, .comment__actions { margin-top: 2px; }
 .wall-post__actions .link-button, .comment__actions .link-button { color: #828a93; font-size: 10px; }
 
+.pager { margin: 10px 0 2px; text-align: center; font-size: 11px; }
+.pager a { color: #2b587a; }
+
 .graffiti-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
 .graffiti-toolbar label { color: #55676d; }
 #graffiti-canvas { cursor: crosshair; }

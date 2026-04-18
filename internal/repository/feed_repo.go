@@ -115,17 +115,19 @@ func (r *FeedRepo) SetVisibleForOwner(ctx context.Context, ownerID int64, userID
 
 // DeleteForBan removes rows involving the opposite party from both users' feeds.
 func (r *FeedRepo) DeleteForBan(ctx context.Context, a, b int64) error {
+	// PostgreSQL DELETE … USING does not let joins inside USING reference the
+	// target table alias, so we compute the ids to drop in a subquery and then
+	// delete by primary key.
 	const q = `
-		DELETE FROM news_feed f
-		USING wall_posts p
-		LEFT JOIN comments c ON c.id = f.comment_id
-		WHERE p.id = f.post_id
-		  AND (f.comment_id IS NULL OR c.id = f.comment_id)
-		  AND (
-		    (f.user_id = $1 AND ($2 IN (p.author_id, p.wall_owner_id) OR c.author_id = $2))
-		    OR
-		    (f.user_id = $2 AND ($1 IN (p.author_id, p.wall_owner_id) OR c.author_id = $1))
-		  )
+		DELETE FROM news_feed
+		WHERE id IN (
+			SELECT f.id
+			FROM news_feed f
+			JOIN wall_posts p ON p.id = f.post_id
+			LEFT JOIN comments c ON c.id = f.comment_id
+			WHERE (f.user_id = $1 AND ($2 IN (p.author_id, p.wall_owner_id) OR c.author_id = $2))
+			   OR (f.user_id = $2 AND ($1 IN (p.author_id, p.wall_owner_id) OR c.author_id = $1))
+		)
 	`
 	if _, err := r.pool.Exec(ctx, q, a, b); err != nil {
 		return fmt.Errorf("delete for ban: %w", err)

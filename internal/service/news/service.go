@@ -25,18 +25,27 @@ type Authorizer interface {
 	CanView(ctx context.Context, viewerID, ownerID int64) (bool, error)
 }
 
+// AvatarAuthorizer решает, видит ли viewer аватар конкретного пользователя
+// (приватность профиля BasicScope + взаимные баны).
+type AvatarAuthorizer interface {
+	CanSeeAvatar(ctx context.Context, viewerID, ownerID int64) (bool, error)
+}
+
 type Service struct {
 	feed       FeedRepo
 	users      UserRepo
 	authorizer Authorizer
+	avatars    AvatarAuthorizer
 }
 
-func NewService(feed FeedRepo, users UserRepo, authorizer Authorizer) *Service {
-	return &Service{feed: feed, users: users, authorizer: authorizer}
+func NewService(feed FeedRepo, users UserRepo, authorizer Authorizer, avatars AvatarAuthorizer) *Service {
+	return &Service{feed: feed, users: users, authorizer: authorizer, avatars: avatars}
 }
 
 type FeedView struct {
 	Events   []EventView
+	HasPrev  bool
+	PrevPage int
 	NextPage int
 }
 
@@ -95,6 +104,26 @@ func (s *Service) LoadFeed(ctx context.Context, viewerID int64, limit, offset in
 		return u, nil
 	}
 
+	avatarCache := map[int64]bool{}
+	mask := func(u domain.User) (domain.User, error) {
+		if u.AvatarPath == "" {
+			return u, nil
+		}
+		canSee, ok := avatarCache[u.ID]
+		if !ok {
+			v, err := s.avatars.CanSeeAvatar(ctx, viewerID, u.ID)
+			if err != nil {
+				return domain.User{}, fmt.Errorf("can see avatar %d: %w", u.ID, err)
+			}
+			avatarCache[u.ID] = v
+			canSee = v
+		}
+		if !canSee {
+			u.AvatarPath = ""
+		}
+		return u, nil
+	}
+
 	views := make([]EventView, 0, len(raw))
 	for _, ev := range raw {
 		if !canView[ev.WallOwnerID] {
@@ -104,9 +133,17 @@ func (s *Service) LoadFeed(ctx context.Context, viewerID int64, limit, offset in
 		if err != nil {
 			return nil, fmt.Errorf("load feed: author %d: %w", ev.AuthorID, err)
 		}
+		author, err = mask(author)
+		if err != nil {
+			return nil, fmt.Errorf("load feed: mask author %d: %w", ev.AuthorID, err)
+		}
 		owner, err := resolve(ev.WallOwnerID)
 		if err != nil {
 			return nil, fmt.Errorf("load feed: owner %d: %w", ev.WallOwnerID, err)
+		}
+		owner, err = mask(owner)
+		if err != nil {
+			return nil, fmt.Errorf("load feed: mask owner %d: %w", ev.WallOwnerID, err)
 		}
 		views = append(views, EventView{
 			Kind:         ev.Kind,
@@ -125,7 +162,12 @@ func (s *Service) LoadFeed(ctx context.Context, viewerID int64, limit, offset in
 	if hasNext {
 		nextPage = offset + len(raw)
 	}
-	return &FeedView{Events: views, NextPage: nextPage}, nil
+	return &FeedView{
+		Events:   views,
+		HasPrev:  offset > 0,
+		PrevPage: max(offset-limit, 0),
+		NextPage: nextPage,
+	}, nil
 }
 
 func truncate(s string, n int) string {

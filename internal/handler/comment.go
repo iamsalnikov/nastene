@@ -49,6 +49,8 @@ func (h *Comment) PostComment(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "нельзя комментировать", http.StatusForbidden)
 		case errors.Is(err, domain.ErrInvalidInput):
 			http.Error(w, "комментарий от 1 до 1000 символов", http.StatusBadRequest)
+		case errors.Is(err, domain.ErrRateLimited):
+			http.Error(w, "слишком часто: лимит комментариев в час исчерпан, попробуйте позже", http.StatusTooManyRequests)
 		case errors.Is(err, domain.ErrNotFound):
 			http.NotFound(w, r)
 		default:

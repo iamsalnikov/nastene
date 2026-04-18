@@ -120,9 +120,11 @@ func run() error {
 
 	sessions := session.NewManager(sessionRepo, userRepo, cfg.SessionCookieName, cfg.SessionCookieSecure, cfg.SessionTTL)
 	authorizer := wall.NewAuthorizer(privacyRepo, friendRepo, banRepo)
-	wallService := wall.NewService(wallPostRepo, userRepo, commentRepo, friendRepo, authorizer)
+	profileAuthorizer := profile.NewAuthorizer(profilePrivacyRepo, friendRepo, banRepo)
+	wallService := wall.NewService(wallPostRepo, userRepo, commentRepo, friendRepo, authorizer, profileAuthorizer)
 	wallService.SetPublisher(publisher)
-	newsService := news.NewService(newsRepo, userRepo, authorizer)
+	wallService.SetRateLimits(cfg.RateLimitPostsPerHour, cfg.RateLimitCommentsPerHour)
+	newsService := news.NewService(newsRepo, userRepo, authorizer, profileAuthorizer)
 	friendsService := friends.NewService(friendRepo, userRepo)
 	friendsService.SetBanCheck(banRepo)
 	bansService := bans.NewService(banRepo, friendRepo, publisher, log)
@@ -146,7 +148,6 @@ func run() error {
 
 	postResolver := repository.NewPostOwnerResolver(wallPostRepo)
 
-	profileAuthorizer := profile.NewAuthorizer(profilePrivacyRepo, friendRepo, banRepo)
 	profileService := profile.NewService(userRepo, profilePrivacyRepo, friendRepo, profileAuthorizer, objStore)
 
 	renderer, err := render.New(web.FS, objStore)

@@ -151,7 +151,7 @@
                 <p class="hint">Вам нельзя писать на этой стене.</p>
                 {{ end }}
 
-                {{ if $view.Posts }}
+                {{ if or $view.Posts $view.HasPrev }}
                     {{ range $view.Posts }}
                         {{ $canDelete := false }}
                         {{ if $viewer }}
@@ -219,8 +219,15 @@
                             </div>
                         </div>
                     {{ end }}
-                    {{ if gt $view.NextPage 0 }}
-                    <p><a href="/id{{ $owner.ID }}?offset={{ $view.NextPage }}">Показать ещё</a></p>
+                    {{ if not $view.Posts }}
+                    <p class="hint">Здесь пусто.</p>
+                    {{ end }}
+                    {{ if or $view.HasPrev (gt $view.NextPage 0) }}
+                    <p class="pager">
+                        {{ if $view.HasPrev }}<a href="/id{{ $owner.ID }}?offset={{ $view.PrevPage }}">← назад</a>{{ end }}
+                        {{ if and $view.HasPrev (gt $view.NextPage 0) }} · {{ end }}
+                        {{ if gt $view.NextPage 0 }}<a href="/id{{ $owner.ID }}?offset={{ $view.NextPage }}">далее →</a>{{ end }}
+                    </p>
                     {{ end }}
                 {{ else }}
                     <p class="hint">Пока ничего не написали.</p>

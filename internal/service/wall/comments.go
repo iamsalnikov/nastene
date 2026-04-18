@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/iamsalnikov/nastene/internal/domain"
@@ -20,6 +21,7 @@ type CommentRepo interface {
 	Create(ctx context.Context, postID, authorID int64, body string) (domain.Comment, error)
 	ByID(ctx context.Context, id int64) (domain.Comment, error)
 	ListByPosts(ctx context.Context, postIDs []int64) ([]domain.Comment, error)
+	CountByAuthorSince(ctx context.Context, authorID int64, since time.Time) (int, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -43,6 +45,10 @@ func (s *Service) CreateComment(ctx context.Context, authorID, postID int64, bod
 	}
 	if !ok {
 		return domain.Comment{}, fmt.Errorf("create comment: %w", domain.ErrForbidden)
+	}
+
+	if err := s.checkCommentLimit(ctx, authorID); err != nil {
+		return domain.Comment{}, fmt.Errorf("create comment: %w", err)
 	}
 
 	c, err := s.comments.Create(ctx, postID, authorID, body)

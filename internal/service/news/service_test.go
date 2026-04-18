@@ -17,6 +17,7 @@ type serviceMocks struct {
 	feed       *newsmocks.FeedRepo
 	users      *newsmocks.UserRepo
 	authorizer *newsmocks.Authorizer
+	avatars    *newsmocks.AvatarAuthorizer
 }
 
 func newService(t *testing.T) (*news.Service, serviceMocks) {
@@ -25,8 +26,9 @@ func newService(t *testing.T) (*news.Service, serviceMocks) {
 		feed:       newsmocks.NewFeedRepo(t),
 		users:      newsmocks.NewUserRepo(t),
 		authorizer: newsmocks.NewAuthorizer(t),
+		avatars:    newsmocks.NewAvatarAuthorizer(t),
 	}
-	return news.NewService(m.feed, m.users, m.authorizer), m
+	return news.NewService(m.feed, m.users, m.authorizer, m.avatars), m
 }
 
 func TestService_LoadFeed(t *testing.T) {
@@ -52,6 +54,8 @@ func TestService_LoadFeed(t *testing.T) {
 		setupMock func(m serviceMocks)
 		wantCount int
 		wantNext  int
+		wantPrev  int
+		wantHas   bool
 	}{
 		"single comment on own wall": {
 			limit:  20,
@@ -137,6 +141,32 @@ func TestService_LoadFeed(t *testing.T) {
 			wantCount: 2,
 			wantNext:  0,
 		},
+		"offset > 0 exposes prev page": {
+			limit:  20,
+			offset: 40,
+			setupMock: func(m serviceMocks) {
+				m.feed.EXPECT().ListFeed(mock.Anything, viewer, 21, 40).
+					Return([]domain.NewsEvent{postEvent}, nil).Once()
+				m.authorizer.EXPECT().CanView(mock.Anything, viewer, friend).Return(true, nil).Once()
+				m.users.EXPECT().ByID(mock.Anything, friend).Return(domain.User{ID: friend}, nil).Once()
+			},
+			wantCount: 1,
+			wantNext:  0,
+			wantPrev:  20,
+			wantHas:   true,
+		},
+		"prev page clamps to zero when offset < limit": {
+			limit:  20,
+			offset: 5,
+			setupMock: func(m serviceMocks) {
+				m.feed.EXPECT().ListFeed(mock.Anything, viewer, 21, 5).
+					Return(nil, nil).Once()
+			},
+			wantCount: 0,
+			wantNext:  0,
+			wantPrev:  0,
+			wantHas:   true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -151,6 +181,40 @@ func TestService_LoadFeed(t *testing.T) {
 			require.NotNil(t, view)
 			require.Len(t, view.Events, tc.wantCount)
 			require.Equal(t, tc.wantNext, view.NextPage)
+			require.Equal(t, tc.wantPrev, view.PrevPage)
+			require.Equal(t, tc.wantHas, view.HasPrev)
 		})
 	}
+}
+
+func TestService_LoadFeed_masksAvatarByPrivacy(t *testing.T) {
+	t.Parallel()
+
+	const viewer int64 = 1
+	const author int64 = 2
+	const owner int64 = 3
+	now := time.Date(2026, 4, 18, 12, 0, 0, 0, time.UTC)
+
+	ev := domain.NewsEvent{
+		Kind: domain.NewsEventPost, EventID: 1, CreatedAt: now,
+		WallOwnerID: owner, AuthorID: author, PostID: 1,
+		PostKind: domain.PostText, BodyText: "hi",
+	}
+
+	svc, m := newService(t)
+	m.feed.EXPECT().ListFeed(mock.Anything, viewer, 21, 0).Return([]domain.NewsEvent{ev}, nil).Once()
+	m.authorizer.EXPECT().CanView(mock.Anything, viewer, owner).Return(true, nil).Once()
+	m.users.EXPECT().ByID(mock.Anything, author).
+		Return(domain.User{ID: author, DisplayName: "A", AvatarPath: "avatars/a.png"}, nil).Once()
+	m.users.EXPECT().ByID(mock.Anything, owner).
+		Return(domain.User{ID: owner, DisplayName: "O", AvatarPath: "avatars/o.png"}, nil).Once()
+	m.avatars.EXPECT().CanSeeAvatar(mock.Anything, viewer, author).Return(false, nil).Once()
+	m.avatars.EXPECT().CanSeeAvatar(mock.Anything, viewer, owner).Return(true, nil).Once()
+
+	view, err := svc.LoadFeed(context.Background(), viewer, 20, 0)
+	require.NoError(t, err)
+	require.NotNil(t, view)
+	require.Len(t, view.Events, 1)
+	require.Empty(t, view.Events[0].Author.AvatarPath, "author avatar hidden when privacy denies viewer")
+	require.Equal(t, "avatars/o.png", view.Events[0].Owner.AvatarPath, "owner avatar remains when viewer can see it")
 }

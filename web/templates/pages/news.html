@@ -5,7 +5,7 @@
 <div class="box wall-box">
     <h1 class="wall-box__title">Новости</h1>
     <div class="wall-box__body">
-    {{ if $feed.Events }}
+    {{ if or $feed.Events $feed.HasPrev }}
         {{ range $feed.Events }}
             {{ $href := printf "/post/%d" .PostID }}
             {{ if eq (print .Kind) "comment" }}{{ $href = printf "/post/%d#comment-%d" .PostID .CommentID }}{{ end }}
@@ -38,8 +38,15 @@
                 </div>
             </div>
         {{ end }}
-        {{ if gt $feed.NextPage 0 }}
-        <p><a href="/news?offset={{ $feed.NextPage }}">Показать ещё</a></p>
+        {{ if not $feed.Events }}
+        <p class="hint">Здесь пусто.</p>
+        {{ end }}
+        {{ if or $feed.HasPrev (gt $feed.NextPage 0) }}
+        <p class="pager">
+            {{ if $feed.HasPrev }}<a href="/news?offset={{ $feed.PrevPage }}">← назад</a>{{ end }}
+            {{ if and $feed.HasPrev (gt $feed.NextPage 0) }} · {{ end }}
+            {{ if gt $feed.NextPage 0 }}<a href="/news?offset={{ $feed.NextPage }}">далее →</a>{{ end }}
+        </p>
         {{ end }}
     {{ else }}
         <p class="hint">Пока нет новостей. Добавьте друзей, чтобы видеть их записи.</p>

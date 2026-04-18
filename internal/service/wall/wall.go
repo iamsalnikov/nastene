@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/iamsalnikov/nastene/internal/domain"
@@ -21,6 +22,7 @@ type PostRepo interface {
 	Create(ctx context.Context, p domain.WallPost) (domain.WallPost, error)
 	ByID(ctx context.Context, id int64) (domain.WallPost, error)
 	ListByWall(ctx context.Context, ownerID int64, limit, offset int) ([]domain.WallPost, error)
+	CountByAuthorSince(ctx context.Context, authorID int64, since time.Time) (int, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -28,23 +30,70 @@ type UserRepo interface {
 	ByID(ctx context.Context, id int64) (domain.User, error)
 }
 
-type Service struct {
-	posts      PostRepo
-	users      UserRepo
-	comments   CommentRepo
-	friendship FriendshipQuery
-	authorizer *Authorizer
-	publisher  events.Publisher
-	log        *slog.Logger
+// AvatarAuthorizer решает, видит ли viewer аватар конкретного пользователя.
+// Аватар прячется правилами приватности профиля (BasicScope) и взаимной невидимостью банов.
+type AvatarAuthorizer interface {
+	CanSeeAvatar(ctx context.Context, viewerID, ownerID int64) (bool, error)
 }
 
-func NewService(posts PostRepo, users UserRepo, comments CommentRepo, friendship FriendshipQuery, authorizer *Authorizer) *Service {
-	return &Service{posts: posts, users: users, comments: comments, friendship: friendship, authorizer: authorizer, log: slog.Default()}
+type Service struct {
+	posts           PostRepo
+	users           UserRepo
+	comments        CommentRepo
+	friendship      FriendshipQuery
+	authorizer      *Authorizer
+	avatars         AvatarAuthorizer
+	publisher       events.Publisher
+	log             *slog.Logger
+	postsPerHour    int
+	commentsPerHour int
+	now             func() time.Time
+}
+
+func NewService(posts PostRepo, users UserRepo, comments CommentRepo, friendship FriendshipQuery, authorizer *Authorizer, avatars AvatarAuthorizer) *Service {
+	return &Service{posts: posts, users: users, comments: comments, friendship: friendship, authorizer: authorizer, avatars: avatars, log: slog.Default(), now: time.Now}
 }
 
 // SetPublisher wires the event publisher. Publishing is best-effort: we log
 // but don't fail the user's request if the message broker is unreachable.
 func (s *Service) SetPublisher(p events.Publisher) { s.publisher = p }
+
+// SetRateLimits sets per-author hourly caps for posts and comments.
+// Zero or negative disables the corresponding limit.
+func (s *Service) SetRateLimits(postsPerHour, commentsPerHour int) {
+	s.postsPerHour = postsPerHour
+	s.commentsPerHour = commentsPerHour
+}
+
+func (s *Service) checkPostLimit(ctx context.Context, authorID int64) error {
+	if s.postsPerHour <= 0 {
+		return nil
+	}
+	since := s.now().Add(-time.Hour)
+	n, err := s.posts.CountByAuthorSince(ctx, authorID, since)
+	if err != nil {
+		return fmt.Errorf("count author posts: %w", err)
+	}
+	if n >= s.postsPerHour {
+		return fmt.Errorf("posts per hour limit %d reached: %w", s.postsPerHour, domain.ErrRateLimited)
+	}
+	return nil
+}
+
+func (s *Service) checkCommentLimit(ctx context.Context, authorID int64) error {
+	if s.commentsPerHour <= 0 {
+		return nil
+	}
+	since := s.now().Add(-time.Hour)
+	n, err := s.comments.CountByAuthorSince(ctx, authorID, since)
+	if err != nil {
+		return fmt.Errorf("count author comments: %w", err)
+	}
+	if n >= s.commentsPerHour {
+		return fmt.Errorf("comments per hour limit %d reached: %w", s.commentsPerHour, domain.ErrRateLimited)
+	}
+	return nil
+}
 
 func (s *Service) CreateTextPost(ctx context.Context, authorID, ownerID int64, body string) (domain.WallPost, error) {
 	body = strings.TrimSpace(body)
@@ -59,6 +108,10 @@ func (s *Service) CreateTextPost(ctx context.Context, authorID, ownerID int64, b
 	}
 	if !ok {
 		return domain.WallPost{}, fmt.Errorf("create text post: %w", domain.ErrForbidden)
+	}
+
+	if err := s.checkPostLimit(ctx, authorID); err != nil {
+		return domain.WallPost{}, fmt.Errorf("create text post: %w", err)
 	}
 
 	post, err := s.posts.Create(ctx, domain.WallPost{
@@ -108,6 +161,8 @@ type WallView struct {
 	CanPost     bool
 	CanComment  bool
 	Posts       []PostView
+	HasPrev     bool
+	PrevPage    int
 	NextPage    int
 	Friendship  FriendshipState
 }
@@ -179,6 +234,9 @@ func (s *Service) LoadWall(ctx context.Context, viewerID, ownerID int64, limit, 
 		nextPage = offset + limit
 	}
 
+	hasPrev := offset > 0
+	prevPage := max(offset-limit, 0)
+
 	postIDs := make([]int64, 0, len(posts))
 	for _, p := range posts {
 		postIDs = append(postIDs, p.ID)
@@ -205,11 +263,20 @@ func (s *Service) LoadWall(ctx context.Context, viewerID, ownerID int64, limit, 
 		return u, nil
 	}
 
+	mask, err := s.avatarMasker(ctx, viewerID)
+	if err != nil {
+		return nil, fmt.Errorf("load wall: avatar masker: %w", err)
+	}
+
 	views := make([]PostView, 0, len(posts))
 	for _, p := range posts {
 		author, err := resolveAuthor(p.AuthorID)
 		if err != nil {
 			return nil, fmt.Errorf("load wall: author %d: %w", p.AuthorID, err)
+		}
+		maskedAuthor, err := mask(author)
+		if err != nil {
+			return nil, fmt.Errorf("load wall: mask author %d: %w", p.AuthorID, err)
 		}
 		cvs := make([]CommentView, 0, len(commentsByPost[p.ID]))
 		for _, c := range commentsByPost[p.ID] {
@@ -217,9 +284,13 @@ func (s *Service) LoadWall(ctx context.Context, viewerID, ownerID int64, limit, 
 			if err != nil {
 				return nil, fmt.Errorf("load wall: comment author %d: %w", c.AuthorID, err)
 			}
-			cvs = append(cvs, CommentView{Comment: c, Author: ca})
+			maskedCA, err := mask(ca)
+			if err != nil {
+				return nil, fmt.Errorf("load wall: mask comment author %d: %w", c.AuthorID, err)
+			}
+			cvs = append(cvs, CommentView{Comment: c, Author: maskedCA})
 		}
-		views = append(views, PostView{Post: p, Author: author, Comments: cvs})
+		views = append(views, PostView{Post: p, Author: maskedAuthor, Comments: cvs})
 	}
 
 	return &WallView{
@@ -230,8 +301,35 @@ func (s *Service) LoadWall(ctx context.Context, viewerID, ownerID int64, limit, 
 		CanPost:     canPost,
 		CanComment:  canComment,
 		Posts:       views,
+		HasPrev:     hasPrev,
+		PrevPage:    prevPage,
 		NextPage:    nextPage,
 		Friendship:  fs,
+	}, nil
+}
+
+// avatarMasker возвращает функцию, которая зануляет AvatarPath у пользователей,
+// для которых viewer не вправе видеть аватар (BasicScope приватности профиля).
+// Результаты кэшируются по userID, чтобы не спрашивать авторизатор повторно.
+func (s *Service) avatarMasker(ctx context.Context, viewerID int64) (func(domain.User) (domain.User, error), error) {
+	cache := map[int64]bool{}
+	return func(u domain.User) (domain.User, error) {
+		if u.AvatarPath == "" {
+			return u, nil
+		}
+		canSee, ok := cache[u.ID]
+		if !ok {
+			v, err := s.avatars.CanSeeAvatar(ctx, viewerID, u.ID)
+			if err != nil {
+				return domain.User{}, fmt.Errorf("can see avatar: %w", err)
+			}
+			cache[u.ID] = v
+			canSee = v
+		}
+		if !canSee {
+			u.AvatarPath = ""
+		}
+		return u, nil
 	}, nil
 }
 

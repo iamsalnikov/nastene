@@ -131,6 +131,10 @@ func parseInt64Path(raw string) (int64, bool) {
 }
 
 func redirectToPostWall(w http.ResponseWriter, r *http.Request, posts PostRefResolver, postID int64) {
+	if ref := r.Referer(); ref != "" {
+		http.Redirect(w, r, ref, http.StatusFound)
+		return
+	}
 	ownerID, err := posts.PostOwner(r.Context(), postID)
 	if err != nil || ownerID == 0 {
 		http.Redirect(w, r, "/", http.StatusFound)

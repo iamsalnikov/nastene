@@ -54,6 +54,13 @@ func (s *Service) SendRequest(ctx context.Context, fromID, toID int64) error {
 		if banned {
 			return fmt.Errorf("send request: %w", domain.ErrForbidden)
 		}
+		bannedRev, err := s.bans.IsBanned(ctx, fromID, toID)
+		if err != nil {
+			return fmt.Errorf("send request: reverse ban check: %w", err)
+		}
+		if bannedRev {
+			return fmt.Errorf("send request: %w", domain.ErrForbidden)
+		}
 	}
 	friends, err := s.repo.AreFriends(ctx, fromID, toID)
 	if err != nil {

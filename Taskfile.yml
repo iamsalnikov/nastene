@@ -27,15 +27,23 @@ tasks:
       - podman-compose logs -f postgres
 
   run:
-    desc: Run the HTTP server
-    cmds:
-      - go run ./cmd/nastene
+    desc: Run HTTP server + feed-builder worker in parallel
+    deps: [run:server, run:feed-builder]
+
+  run:server:
+    desc: Run only the HTTP server
+    cmd: go run ./cmd/nastene
+
+  run:feed-builder:
+    desc: Run only the news-feed builder worker (subscribes to RabbitMQ)
+    cmd: go run ./cmd/feed-builder
 
   build:
-    desc: Build binary into ./bin/nastene
+    desc: Build binaries into ./bin
     cmds:
       - mkdir -p bin
       - go build -o bin/nastene ./cmd/nastene
+      - go build -o bin/feed-builder ./cmd/feed-builder
 
   test:
     desc: Run all tests

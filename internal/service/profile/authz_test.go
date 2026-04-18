@@ -49,10 +49,18 @@ func TestAuthorizer_Visibility(t *testing.T) {
 			setupMock: func(m authorizerMocks) {},
 			want:      profile.Visibility{Self: true, Online: true, Basic: true, FriendsList: true, Bio: true},
 		},
-		"banned viewer sees nothing": {
+		"owner banned viewer sees nothing": {
 			viewerID: viewer,
 			setupMock: func(m authorizerMocks) {
 				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(true, nil).Once()
+			},
+			want: profile.Visibility{Banned: true},
+		},
+		"viewer banned owner sees nothing": {
+			viewerID: viewer,
+			setupMock: func(m authorizerMocks) {
+				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+				m.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(true, nil).Once()
 			},
 			want: profile.Visibility{Banned: true},
 		},
@@ -60,6 +68,7 @@ func TestAuthorizer_Visibility(t *testing.T) {
 			viewerID: viewer,
 			setupMock: func(m authorizerMocks) {
 				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+				m.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(false, nil).Once()
 				m.privacy.EXPECT().Get(mock.Anything, owner).
 					Return(privacyAll(domain.ProfileScopeEveryone), nil).Once()
 			},
@@ -69,6 +78,7 @@ func TestAuthorizer_Visibility(t *testing.T) {
 			viewerID: viewer,
 			setupMock: func(m authorizerMocks) {
 				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+				m.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(false, nil).Once()
 				m.privacy.EXPECT().Get(mock.Anything, owner).
 					Return(privacyAll(domain.ProfileScopeFriends), nil).Once()
 				m.friends.EXPECT().AreFriends(mock.Anything, viewer, owner).Return(false, nil).Once()
@@ -79,6 +89,7 @@ func TestAuthorizer_Visibility(t *testing.T) {
 			viewerID: viewer,
 			setupMock: func(m authorizerMocks) {
 				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+				m.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(false, nil).Once()
 				m.privacy.EXPECT().Get(mock.Anything, owner).
 					Return(privacyAll(domain.ProfileScopeFriends), nil).Once()
 				m.friends.EXPECT().AreFriends(mock.Anything, viewer, owner).Return(true, nil).Once()
@@ -89,6 +100,7 @@ func TestAuthorizer_Visibility(t *testing.T) {
 			viewerID: viewer,
 			setupMock: func(m authorizerMocks) {
 				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+				m.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(false, nil).Once()
 				m.privacy.EXPECT().Get(mock.Anything, owner).
 					Return(privacyAll(domain.ProfileScopeNobody), nil).Once()
 			},
@@ -114,6 +126,7 @@ func TestAuthorizer_Visibility(t *testing.T) {
 			viewerID: viewer,
 			setupMock: func(m authorizerMocks) {
 				m.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+				m.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(false, nil).Once()
 				m.privacy.EXPECT().Get(mock.Anything, owner).Return(domain.ProfilePrivacy{
 					OnlineScope:  domain.ProfileScopeNobody,
 					BasicScope:   domain.ProfileScopeEveryone,
@@ -147,6 +160,7 @@ func TestAuthorizer_CanSee(t *testing.T) {
 	authz, mocks := newAuthorizer(t)
 
 	mocks.bans.EXPECT().IsBanned(mock.Anything, owner, viewer).Return(false, nil).Once()
+	mocks.bans.EXPECT().IsBanned(mock.Anything, viewer, owner).Return(false, nil).Once()
 	mocks.privacy.EXPECT().Get(mock.Anything, owner).Return(domain.ProfilePrivacy{
 		OnlineScope:  domain.ProfileScopeEveryone,
 		BasicScope:   domain.ProfileScopeNobody,

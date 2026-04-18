@@ -25,7 +25,9 @@ type Config struct {
 
 	InvitesPerUser   int
 	RegistrationMode string
-	PublicURL        string
+
+	RabbitMQDSN   string
+	ConsumerGroup string
 }
 
 const (
@@ -95,8 +97,6 @@ func Load() (Config, error) {
 	}
 	cfg.S3AutoCreateBucket = autoCreate
 
-	cfg.PublicURL = os.Getenv("PUBLIC_URL")
-
 	invitesRaw := envOr("INVITES_PER_USER", "2")
 	invites, err := strconv.Atoi(invitesRaw)
 	if err != nil || invites < 0 {
@@ -109,6 +109,12 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("parse REGISTRATION_MODE %q: must be %q or %q", mode, RegistrationModeInvite, RegistrationModeOpen)
 	}
 	cfg.RegistrationMode = mode
+
+	cfg.RabbitMQDSN = os.Getenv("RABBITMQ_DSN")
+	if cfg.RabbitMQDSN == "" {
+		return Config{}, fmt.Errorf("load config: RABBITMQ_DSN is required")
+	}
+	cfg.ConsumerGroup = envOr("CONSUMER_GROUP", "nastene")
 
 	return cfg, nil
 }

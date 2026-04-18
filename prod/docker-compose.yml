@@ -18,12 +18,47 @@ services:
       options:
         max-size: "10m"
 
+  rabbit:
+    image: rabbitmq:3.13-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - nastene-rabbit:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
   nastene:
     image: ghcr.io/iamsalnikov/nastene:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbit:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+  feed-builder:
+    image: ghcr.io/iamsalnikov/nastene:latest
+    entrypoint: ["/bin/feed-builder"]
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbit:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -36,8 +71,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -51,5 +84,6 @@ services:
 
 volumes:
   nastene-pg:
+  nastene-rabbit:
   caddy-data:
   caddy-config:

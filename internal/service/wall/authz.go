@@ -31,7 +31,9 @@ func NewAuthorizer(privacy PrivacyRepo, friends FriendRepo, bans BanRepo) *Autho
 	return &Authorizer{privacy: privacy, friends: friends, bans: bans}
 }
 
-// IsBanned reports whether ownerID has banned otherID.
+// IsBanned reports whether ownerID has banned otherID (one-directional, used
+// for UI hints like "you've banned this user"). For visibility decisions use
+// the two-way check inside CanView/CanPost/CanComment.
 func (a *Authorizer) IsBanned(ctx context.Context, ownerID, otherID int64) (bool, error) {
 	if ownerID == otherID {
 		return false, nil
@@ -43,14 +45,33 @@ func (a *Authorizer) IsBanned(ctx context.Context, ownerID, otherID int64) (bool
 	return banned, nil
 }
 
+// mutuallyBanned returns true if either side has banned the other.
+func (a *Authorizer) mutuallyBanned(ctx context.Context, x, y int64) (bool, error) {
+	if x == y {
+		return false, nil
+	}
+	banned, err := a.bans.IsBanned(ctx, x, y)
+	if err != nil {
+		return false, fmt.Errorf("mutually banned: %w", err)
+	}
+	if banned {
+		return true, nil
+	}
+	rev, err := a.bans.IsBanned(ctx, y, x)
+	if err != nil {
+		return false, fmt.Errorf("mutually banned reverse: %w", err)
+	}
+	return rev, nil
+}
+
 // CanView reports whether viewer can see ownerID's wall.
 func (a *Authorizer) CanView(ctx context.Context, viewerID, ownerID int64) (bool, error) {
 	if viewerID == ownerID {
 		return true, nil
 	}
-	banned, err := a.bans.IsBanned(ctx, ownerID, viewerID)
+	banned, err := a.mutuallyBanned(ctx, viewerID, ownerID)
 	if err != nil {
-		return false, fmt.Errorf("can view: check ban: %w", err)
+		return false, fmt.Errorf("can view: %w", err)
 	}
 	if banned {
 		return false, nil
@@ -67,9 +88,9 @@ func (a *Authorizer) CanPost(ctx context.Context, authorID, ownerID int64) (bool
 	if authorID == ownerID {
 		return true, nil
 	}
-	banned, err := a.bans.IsBanned(ctx, ownerID, authorID)
+	banned, err := a.mutuallyBanned(ctx, authorID, ownerID)
 	if err != nil {
-		return false, fmt.Errorf("can post: check ban: %w", err)
+		return false, fmt.Errorf("can post: %w", err)
 	}
 	if banned {
 		return false, nil
@@ -86,9 +107,9 @@ func (a *Authorizer) CanComment(ctx context.Context, authorID, ownerID int64) (b
 	if authorID == ownerID {
 		return true, nil
 	}
-	banned, err := a.bans.IsBanned(ctx, ownerID, authorID)
+	banned, err := a.mutuallyBanned(ctx, authorID, ownerID)
 	if err != nil {
-		return false, fmt.Errorf("can comment: check ban: %w", err)
+		return false, fmt.Errorf("can comment: %w", err)
 	}
 	if banned {
 		return false, nil

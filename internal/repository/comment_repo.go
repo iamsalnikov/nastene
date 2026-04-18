@@ -77,6 +77,32 @@ func (r *CommentRepo) ListByPosts(ctx context.Context, postIDs []int64) ([]domai
 	return out, nil
 }
 
+func (r *CommentRepo) DistinctAuthorsByPost(ctx context.Context, postID, excludeAuthorID int64) ([]int64, error) {
+	const q = `
+		SELECT DISTINCT author_id
+		FROM comments
+		WHERE post_id = $1 AND author_id <> $2
+	`
+	rows, err := r.pool.Query(ctx, q, postID, excludeAuthorID)
+	if err != nil {
+		return nil, fmt.Errorf("distinct comment authors: %w", err)
+	}
+	defer rows.Close()
+
+	var out []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan author: %w", err)
+		}
+		out = append(out, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("authors rows: %w", err)
+	}
+	return out, nil
+}
+
 func (r *CommentRepo) Delete(ctx context.Context, id int64) error {
 	const q = `DELETE FROM comments WHERE id = $1`
 	if _, err := r.pool.Exec(ctx, q, id); err != nil {

@@ -166,7 +166,7 @@
                             <div class="wall-post__main">
                                 <div>
                                     <span class="author"><a href="/id{{ .Author.ID }}">{{ .Author.DisplayName }}</a></span>
-                                    <span class="meta">{{ formatDate .Post.CreatedAt }}</span>
+                                    <a href="/post/{{ .Post.ID }}" class="meta">{{ formatDate .Post.CreatedAt }}</a>
                                 </div>
                                 <div class="body">{{ if eq (print .Post.Kind) "graffiti" }}<img class="graffiti-img" src="{{ graffitiURL .Post.GraffitiPath }}" alt="граффити">{{ else }}{{ .Post.BodyText }}{{ end }}</div>
                                 {{ if $canDelete }}

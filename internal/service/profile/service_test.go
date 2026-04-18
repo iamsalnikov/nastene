@@ -74,6 +74,7 @@ func TestService_Get_MasksHiddenFields(t *testing.T) {
 	svc, m := newService(t)
 	m.users.EXPECT().ByID(mock.Anything, int64(owner)).Return(ownerUser(), nil).Once()
 	m.authz.bans.EXPECT().IsBanned(mock.Anything, int64(owner), int64(viewer)).Return(false, nil).Once()
+	m.authz.bans.EXPECT().IsBanned(mock.Anything, int64(viewer), int64(owner)).Return(false, nil).Once()
 	m.authz.privacy.EXPECT().Get(mock.Anything, int64(owner)).Return(domain.ProfilePrivacy{
 		OnlineScope: domain.ProfileScopeNobody, BasicScope: domain.ProfileScopeNobody,
 		FriendsScope: domain.ProfileScopeNobody, BioScope: domain.ProfileScopeNobody,

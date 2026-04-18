@@ -14,9 +14,13 @@ RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -a -installsuffix cgo -o /app/nastene ./cmd/nastene
 
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -a -installsuffix cgo -o /app/feed-builder ./cmd/feed-builder
+
 FROM scratch
 
 COPY --from=builder /app/nastene /bin/nastene
+COPY --from=builder /app/feed-builder /bin/feed-builder
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc_passwd /etc/passwd
 

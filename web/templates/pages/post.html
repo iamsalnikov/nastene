@@ -1,0 +1,79 @@
+{{ define "content" }}
+{{ $d := .Data }}
+{{ $viewer := .User }}
+{{ $csrf := .CSRFToken }}
+
+<div class="box wall-box">
+    <h1 class="wall-box__title">
+        <a href="/id{{ $d.Owner.ID }}" class="meta">← к стене {{ $d.Owner.DisplayName }}</a>
+    </h1>
+    <div class="wall-box__body">
+        <div class="wall-post">
+            <a href="/id{{ $d.Author.ID }}" class="wall-post__avatar">
+                <img src="{{ avatarURL $d.Author.AvatarPath }}" alt="" width="40" height="40">
+            </a>
+            <div class="wall-post__main">
+                <div>
+                    <span class="author"><a href="/id{{ $d.Author.ID }}">{{ $d.Author.DisplayName }}</a></span>
+                    {{ if ne $d.Author.ID $d.Owner.ID }}
+                    <span class="meta">на стене
+                        <a href="/id{{ $d.Owner.ID }}">{{ $d.Owner.DisplayName }}</a>
+                    </span>
+                    {{ end }}
+                    <span class="meta">{{ formatDate $d.Post.CreatedAt }}</span>
+                </div>
+                <div class="body">{{ if eq (print $d.Post.Kind) "graffiti" }}<img class="graffiti-img" src="{{ graffitiURL $d.Post.GraffitiPath }}" alt="граффити">{{ else }}{{ $d.Post.BodyText }}{{ end }}</div>
+                {{ if $d.CanDelete }}
+                <div class="wall-post__actions">
+                    <form method="post" action="/post/{{ $d.Post.ID }}/delete" class="inline" onsubmit="return confirm('Удалить пост?')">
+                        <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                        <button type="submit" class="link-button meta">удалить</button>
+                    </form>
+                </div>
+                {{ end }}
+
+                {{ if $d.Comments }}
+                <div class="comments">
+                    {{ range $d.Comments }}
+                    <div class="comment" id="comment-{{ .Comment.ID }}">
+                        <a href="/id{{ .Author.ID }}" class="comment__avatar">
+                            <img src="{{ avatarURL .Author.AvatarPath }}" alt="" width="24" height="24">
+                        </a>
+                        <div class="comment__main">
+                            <div>
+                                <span class="author"><a href="/id{{ .Author.ID }}">{{ .Author.DisplayName }}</a></span>
+                                <span class="meta">{{ formatDate .Comment.CreatedAt }}</span>
+                            </div>
+                            <div>{{ .Comment.Body }}</div>
+                            {{ if $viewer }}
+                                {{ if or (eq $viewer.ID .Comment.AuthorID) (eq $viewer.ID $d.Owner.ID) }}
+                                <div class="comment__actions">
+                                    <form method="post" action="/comment/{{ .Comment.ID }}/delete" class="inline" onsubmit="return confirm('Удалить комментарий?')">
+                                        <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                                        <button type="submit" class="link-button meta">удалить</button>
+                                    </form>
+                                </div>
+                                {{ end }}
+                            {{ end }}
+                        </div>
+                    </div>
+                    {{ end }}
+                </div>
+                {{ end }}
+
+                {{ if $d.CanComment }}
+                <form method="post" action="/post/{{ $d.Post.ID }}/comment" class="form comment-form">
+                    <input type="hidden" name="_csrf" value="{{ $csrf }}">
+                    <div class="row">
+                        <textarea name="body" placeholder="Комментарий" required rows="2" style="width:100%;height:40px"></textarea>
+                    </div>
+                    <div class="row"><button type="submit">Ответить</button></div>
+                </form>
+                {{ else }}
+                <p class="hint">Вам нельзя комментировать эту запись.</p>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

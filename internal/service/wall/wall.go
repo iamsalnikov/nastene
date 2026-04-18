@@ -3,10 +3,13 @@ package wall
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/iamsalnikov/nastene/internal/domain"
+	"github.com/iamsalnikov/nastene/internal/events"
+	"github.com/iamsalnikov/nastene/pkg/q"
 )
 
 const (
@@ -31,11 +34,17 @@ type Service struct {
 	comments   CommentRepo
 	friendship FriendshipQuery
 	authorizer *Authorizer
+	publisher  events.Publisher
+	log        *slog.Logger
 }
 
 func NewService(posts PostRepo, users UserRepo, comments CommentRepo, friendship FriendshipQuery, authorizer *Authorizer) *Service {
-	return &Service{posts: posts, users: users, comments: comments, friendship: friendship, authorizer: authorizer}
+	return &Service{posts: posts, users: users, comments: comments, friendship: friendship, authorizer: authorizer, log: slog.Default()}
 }
+
+// SetPublisher wires the event publisher. Publishing is best-effort: we log
+// but don't fail the user's request if the message broker is unreachable.
+func (s *Service) SetPublisher(p events.Publisher) { s.publisher = p }
 
 func (s *Service) CreateTextPost(ctx context.Context, authorID, ownerID int64, body string) (domain.WallPost, error) {
 	body = strings.TrimSpace(body)
@@ -61,7 +70,18 @@ func (s *Service) CreateTextPost(ctx context.Context, authorID, ownerID int64, b
 	if err != nil {
 		return domain.WallPost{}, fmt.Errorf("create text post: %w", err)
 	}
+
+	s.publishWallPost(post.ID)
 	return post, nil
+}
+
+func (s *Service) publishWallPost(postID int64) {
+	if s.publisher == nil {
+		return
+	}
+	if err := q.Publish(s.publisher, events.TopicWallPostCreated, events.WallPostCreated{PostID: postID}); err != nil {
+		s.log.Warn("publish wall post created failed", "err", err, "post_id", postID)
+	}
 }
 
 type FriendshipState string

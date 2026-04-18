@@ -1,4 +1,4 @@
-{$DOMAIN} {
+nastene.live, stena.rip, stena.social {
     encode gzip
     reverse_proxy nastene:8080
 }

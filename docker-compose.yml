@@ -34,6 +34,20 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbit:
+    image: rabbitmq:3.13-alpine
+    container_name: nastene-rabbit
+    ports:
+      - "5672:5672"
+    volumes:
+      - nastene-rabbit:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   nastene-pg:
   nastene-minio:
+  nastene-rabbit:

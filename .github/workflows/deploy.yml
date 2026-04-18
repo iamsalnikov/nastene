@@ -81,4 +81,8 @@ jobs:
       - name: Run docker compose remotely
         run: |
           ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "cd /var/www/nastene && docker compose pull && docker compose up -d && docker logout ghcr.io"
+            "cd /var/www/nastene && \
+             docker compose pull && \
+             docker compose run --rm nastene migrate && \
+             docker compose up -d && \
+             docker logout ghcr.io"

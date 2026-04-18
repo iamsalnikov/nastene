@@ -17,6 +17,7 @@ import (
 
 type WallService interface {
 	LoadWall(ctx context.Context, viewerID, ownerID int64, limit, offset int) (*wall.WallView, error)
+	LoadPost(ctx context.Context, viewerID, postID int64) (*wall.PostDetail, error)
 	CreateTextPost(ctx context.Context, authorID, ownerID int64, body string) (domain.WallPost, error)
 }
 
@@ -105,6 +106,33 @@ func (h *Wall) PostText(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/id%d", ownerID), http.StatusFound)
+}
+
+func (h *Wall) GetPost(w http.ResponseWriter, r *http.Request) {
+	postID, ok := parseInt64Path(r.PathValue("id"))
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	viewerID := viewerIDFromCtx(r.Context())
+
+	detail, err := h.Service.LoadPost(r.Context(), viewerID, postID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			http.NotFound(w, r)
+		case errors.Is(err, domain.ErrForbidden):
+			http.Error(w, "пост скрыт", http.StatusForbidden)
+		default:
+			http.Error(w, fmt.Sprintf("load post: %v", err), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	h.Renderer.Page(w, r, "post", render.PageData{
+		Title: "Пост",
+		Data:  detail,
+	})
 }
 
 func parseOwnerID(r *http.Request) (int64, bool) {

@@ -22,9 +22,8 @@ type FriendsService interface {
 }
 
 type Friends struct {
-	Service   FriendsService
-	Renderer  *render.Renderer
-	PublicURL string
+	Service  FriendsService
+	Renderer *render.Renderer
 }
 
 func (h *Friends) GetOverview(w http.ResponseWriter, r *http.Request) {
@@ -39,9 +38,20 @@ func (h *Friends) GetOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ov.InviteToken != "" {
-		ov.InviteURL = h.PublicURL + "/register?invite=" + ov.InviteToken
+		ov.InviteURL = requestBaseURL(r) + "/register?invite=" + ov.InviteToken
 	}
 	h.Renderer.Page(w, r, "friends", render.PageData{Title: "Друзья", Data: ov})
+}
+
+func requestBaseURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+		scheme = proto
+	}
+	return scheme + "://" + r.Host
 }
 
 func (h *Friends) Request(w http.ResponseWriter, r *http.Request) {

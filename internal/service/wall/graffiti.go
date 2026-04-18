@@ -64,6 +64,8 @@ func (s *Service) CreateGraffitiPost(ctx context.Context, authorID, ownerID int6
 	if err != nil {
 		return domain.WallPost{}, fmt.Errorf("create graffiti: insert: %w", err)
 	}
+
+	s.publishWallPost(post.ID)
 	return post, nil
 }
 

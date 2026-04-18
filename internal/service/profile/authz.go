@@ -53,6 +53,12 @@ func (a *Authorizer) Visibility(ctx context.Context, viewerID, ownerID int64) (V
 		if err != nil {
 			return Visibility{}, fmt.Errorf("profile visibility: check ban: %w", err)
 		}
+		if !banned {
+			banned, err = a.bans.IsBanned(ctx, viewerID, ownerID)
+			if err != nil {
+				return Visibility{}, fmt.Errorf("profile visibility: check reverse ban: %w", err)
+			}
+		}
 		if banned {
 			return Visibility{Banned: true}, nil
 		}

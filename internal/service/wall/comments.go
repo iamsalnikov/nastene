@@ -7,6 +7,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/iamsalnikov/nastene/internal/domain"
+	"github.com/iamsalnikov/nastene/internal/events"
+	"github.com/iamsalnikov/nastene/pkg/q"
 )
 
 const (
@@ -46,6 +48,12 @@ func (s *Service) CreateComment(ctx context.Context, authorID, postID int64, bod
 	c, err := s.comments.Create(ctx, postID, authorID, body)
 	if err != nil {
 		return domain.Comment{}, fmt.Errorf("create comment: %w", err)
+	}
+
+	if s.publisher != nil {
+		if err := q.Publish(s.publisher, events.TopicCommentCreated, events.CommentCreated{CommentID: c.ID}); err != nil {
+			s.log.Warn("publish comment created failed", "err", err, "comment_id", c.ID)
+		}
 	}
 	return c, nil
 }

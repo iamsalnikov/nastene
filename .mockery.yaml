@@ -13,3 +13,18 @@ packages:
   github.com/iamsalnikov/nastene/internal/service/profile:
     config:
       all: true
+  github.com/iamsalnikov/nastene/internal/service/news:
+    config:
+      all: true
+  github.com/iamsalnikov/nastene/internal/service/newsfeed:
+    config:
+      all: true
+  github.com/iamsalnikov/nastene/internal/service/bans:
+    config:
+      all: true
+  github.com/iamsalnikov/nastene/internal/service/privacy:
+    config:
+      all: true
+  github.com/iamsalnikov/nastene/internal/events:
+    config:
+      all: true

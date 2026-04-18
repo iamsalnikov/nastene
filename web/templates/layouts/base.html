@@ -15,6 +15,7 @@
             <div class="header-links">
                 {{ if .User }}
                     <a href="/id{{ .User.ID }}">Моя страница</a>
+                    <a href="/news">Новости</a>
                     <a href="/friends">Друзья{{ if gt .IncomingRequests 0 }} (+{{ abbrev .IncomingRequests }}){{ end }}</a>
                     <a href="/settings">Настройки</a>
                     <form method="post" action="/logout" class="inline">

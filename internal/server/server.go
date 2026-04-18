@@ -35,6 +35,7 @@ type Deps struct {
 	Privacy         handler.PrivacyInitializer
 	ProfileService  handler.ProfileService
 	ProfilePrivacy  handler.PrivacyInitializer
+	NewsService     handler.NewsService
 	IncomingCounter render.IncomingCounter
 	StaticFS        fs.FS
 }
@@ -83,6 +84,13 @@ func New(deps Deps) *Server {
 	}
 	authed.HandleFunc("GET /id/{id}", wall.Get)
 	authed.HandleFunc("POST /id/{id}/post", wall.PostText)
+	authed.HandleFunc("GET /post/{id}", wall.GetPost)
+
+	news := &handler.News{
+		Service:  deps.NewsService,
+		Renderer: deps.Renderer,
+	}
+	authed.HandleFunc("GET /news", news.Get)
 
 	comment := &handler.Comment{
 		Service: deps.CommentService,
@@ -93,9 +101,8 @@ func New(deps Deps) *Server {
 	authed.HandleFunc("POST /comment/{id}/delete", comment.DeleteComment)
 
 	friends := &handler.Friends{
-		Service:   deps.FriendsService,
-		Renderer:  deps.Renderer,
-		PublicURL: deps.Cfg.PublicURL,
+		Service:  deps.FriendsService,
+		Renderer: deps.Renderer,
 	}
 	authed.HandleFunc("GET /friends", friends.GetOverview)
 	authed.HandleFunc("POST /friends/request/{id}", friends.Request)

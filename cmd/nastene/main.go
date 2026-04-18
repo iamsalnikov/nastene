@@ -16,19 +16,58 @@ import (
 	"github.com/iamsalnikov/nastene/internal/repository"
 	"github.com/iamsalnikov/nastene/internal/server"
 	authsvc "github.com/iamsalnikov/nastene/internal/service/auth"
+	"github.com/iamsalnikov/nastene/internal/service/bans"
 	"github.com/iamsalnikov/nastene/internal/service/friends"
+	"github.com/iamsalnikov/nastene/internal/service/news"
+	"github.com/iamsalnikov/nastene/internal/service/privacy"
 	"github.com/iamsalnikov/nastene/internal/service/profile"
 	"github.com/iamsalnikov/nastene/internal/service/wall"
 	"github.com/iamsalnikov/nastene/internal/session"
 	"github.com/iamsalnikov/nastene/internal/storage/objectstore"
+	"github.com/iamsalnikov/nastene/pkg/rabbit"
 	"github.com/iamsalnikov/nastene/web"
 )
 
 func main() {
-	if err := run(); err != nil {
+	cmd := ""
+	if len(os.Args) > 1 {
+		cmd = os.Args[1]
+	}
+
+	var err error
+	switch cmd {
+	case "migrate":
+		err = migrateOnly()
+	case "", "serve":
+		err = run()
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command: %q (expected: migrate, serve)\n", cmd)
+		os.Exit(2)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "fatal:", err)
 		os.Exit(1)
 	}
+}
+
+func migrateOnly() error {
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	slog.SetDefault(log)
+
+	if err := config.LoadDotEnv(".env"); err != nil {
+		return fmt.Errorf("load .env: %w", err)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	if err := runMigrations(cfg.DatabaseURL); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+	log.Info("migrations applied")
+	return nil
 }
 
 func run() error {
@@ -58,10 +97,16 @@ func run() error {
 	}
 	log.Info("postgres connected")
 
-	if err := runMigrations(cfg.DatabaseURL); err != nil {
-		return fmt.Errorf("run migrations: %w", err)
+	publisher, err := rabbit.NewPublisher(cfg.RabbitMQDSN, cfg.ConsumerGroup)
+	if err != nil {
+		return fmt.Errorf("init rabbit publisher: %w", err)
 	}
-	log.Info("migrations applied")
+	defer func() {
+		if err := publisher.Close(); err != nil {
+			log.Warn("close rabbit publisher", "err", err)
+		}
+	}()
+	log.Info("rabbit publisher ready")
 
 	userRepo := repository.NewUserRepo(pool)
 	sessionRepo := repository.NewSessionRepo(pool)
@@ -71,12 +116,17 @@ func run() error {
 	friendRepo := repository.NewFriendRepo(pool)
 	wallPostRepo := repository.NewWallPostRepo(pool)
 	commentRepo := repository.NewCommentRepo(pool)
+	newsRepo := repository.NewNewsRepo(pool)
 
 	sessions := session.NewManager(sessionRepo, userRepo, cfg.SessionCookieName, cfg.SessionCookieSecure, cfg.SessionTTL)
 	authorizer := wall.NewAuthorizer(privacyRepo, friendRepo, banRepo)
 	wallService := wall.NewService(wallPostRepo, userRepo, commentRepo, friendRepo, authorizer)
+	wallService.SetPublisher(publisher)
+	newsService := news.NewService(newsRepo, userRepo, authorizer)
 	friendsService := friends.NewService(friendRepo, userRepo)
 	friendsService.SetBanCheck(banRepo)
+	bansService := bans.NewService(banRepo, friendRepo, publisher, log)
+	privacyService := privacy.NewService(privacyRepo, publisher, log)
 	authService := authsvc.NewService(userRepo, friendsService, cfg.InvitesPerUser, cfg.RegistrationMode == config.RegistrationModeInvite)
 
 	objStore, err := objectstore.New(ctx, objectstore.Config{
@@ -119,15 +169,16 @@ func run() error {
 		WallService:     wallService,
 		CommentService:  wallService,
 		FriendsService:  friendsService,
-		PrivacyService:  privacyRepo,
-		BanService:      banRepo,
+		PrivacyService:  privacyService,
+		BanService:      bansService,
 		UserLookup:      userRepo,
 		PostOwner:       postResolver,
 		GraffitiService: wallService,
 		GraffitiStore:   objStore,
-		Privacy:         privacyRepo,
+		Privacy:         privacyService,
 		ProfileService:  profileService,
 		ProfilePrivacy:  profilePrivacyRepo,
+		NewsService:     newsService,
 		IncomingCounter: friendRepo,
 		StaticFS:        staticFS,
 	})
